@@ -240,15 +240,13 @@ curl http://localhost:9100/health
 
 For comprehensive guides and detailed instructions:
 
-- **[Getting Started Guide](docs/getting-started.md)** - Complete walkthrough from installation to first agent deployment
-- **[Architecture Overview](docs/)** - System design, components, and data flows
-- **[Agent Development Guide](docs/)** - How to create and deploy custom agents  
+- **[Getting Started Guide](docs/getting-started.md)** - First login, deploying your first agent, and testing it 
 - **[API Reference](http://localhost:8000/docs)** - Full REST API documentation (after startup)
 
 ### Quick Links
 
-- **📖 Complete Setup Guide**: Follow the [Getting Started Guide](docs/getting-started.md) for detailed installation and first agent deployment
-- **🔑 Login Credentials**: Check `orchestrator/superuser_credentials.json` after startup  
+- **📖 First Login & Agent Deploy**: After setup, follow the [Getting Started Guide](docs/getting-started.md) to sign in and deploy your first agent
+- **🔑 Login Credentials**: Generated automatically at `orchestrator/superuser_credentials.json`
 - **🤖 Test Agent**: Use `agents/a2a-translator.zip` for your first agent upload
 
 ## 🛠️ CLI Tool
@@ -258,8 +256,12 @@ The Nasiko CLI provides complete platform management:
 ### Installation & Authentication
 
 ```bash
-# Install from source
-cd cli && pip install -e .
+# Install CLI (uv sync at the repo root installs all dependencies including the CLI)
+pip install uv
+uv sync
+
+# Or install the CLI standalone
+# cd cli && pip install -e .
 
 # Configure API endpoint
 export NASIKO_API_URL=http://localhost:9100
@@ -381,6 +383,8 @@ async def health_check():
 FROM python:3.12-slim
 
 WORKDIR /app
+# Your agent's pyproject.toml should list its own dependencies (fastapi, uvicorn, etc.)
+# See agents/a2a-translator/ for a working example.
 COPY pyproject.toml .
 RUN pip install -e .
 
@@ -618,11 +622,13 @@ docker compose -f docker-compose.local.yml --env-file .nasiko-local.env up -d
 
 ### Alternative Makefile Commands
 
+The Makefile provides an alternative workflow for running orchestrator components directly on the host (outside Docker) using `uv`. This is useful when iterating on orchestrator code without rebuilding containers.
+
 ```bash
-make start-nasiko        # Clean volumes + start services
-make orchestrator        # Run orchestrator only
-make redis-listener      # Run Redis stream processor
-make clean-all          # Nuclear cleanup
+make start-nasiko        # Clean volumes + run orchestrator and redis listener on host
+make orchestrator        # Run orchestrator only (via uv)
+make redis-listener      # Run Redis stream processor (via uv)
+make clean-all          # Nuclear cleanup — stops all containers, removes volumes and images
 make backend-app        # Restart backend services
 ```
 
@@ -630,10 +636,11 @@ make backend-app        # Restart backend services
 
 ### Critical Dependencies
 
-1. **Redis Stream Listener** - Agent uploads require the async processor:
+1. **Redis Stream Listener** - Agent uploads are processed by the `nasiko-redis-listener` service, which starts automatically with Docker Compose. If agent uploads are failing, check that it's healthy:
+
    ```bash
-   # Must run separately for agent uploads to work
-   uv run orchestrator/redis_stream_listener.py
+   docker logs nasiko-redis-listener
+   docker compose -f docker-compose.local.yml --env-file .nasiko-local.env restart nasiko-redis-listener
    ```
 
 2. **Docker Networks** - Required networks created automatically:
@@ -667,8 +674,10 @@ make backend-app        # Restart backend services
 **Agent won't deploy:**
 ```bash
 # Check Redis stream listener is running
-ps aux | grep redis_stream_listener
-# If not running: uv run orchestrator/redis_stream_listener.py
+docker logs nasiko-redis-listener
+
+# Restart the listener if needed
+docker compose -f docker-compose.local.yml --env-file .nasiko-local.env restart nasiko-redis-listener
 
 # Check Docker daemon
 docker info
