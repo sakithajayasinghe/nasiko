@@ -31,22 +31,30 @@ class AgentCardGeneratorAgent:
         api_key: str = None,
         model: str = "gpt-4o",
         n8n_agent: bool = False,
+        base_url: str = None,
     ):
         """
         Initialize the agent
 
         Args:
-            api_key: OpenAI API key (or set OPENAI_API_KEY env var)
+            api_key: OpenAI API key or MiniMax API key (or set OPENAI_API_KEY / MINIMAX_API_KEY env var)
             model: Model to use for reasoning
+            base_url: Custom base URL for OpenAI-compatible APIs (e.g., MiniMax)
         """
         # load_dotenv()
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
+        self.api_key = api_key or os.getenv("OPENAI_API_KEY") or os.getenv("MINIMAX_API_KEY")
         if not self.api_key:
-            logger.error("OPENAI_API_KEY not found in environment or arguments")
-            raise ValueError("OPENAI_API_KEY must be set")
+            logger.error("Neither OPENAI_API_KEY nor MINIMAX_API_KEY found in environment or arguments")
+            raise ValueError("OPENAI_API_KEY or MINIMAX_API_KEY must be set")
+
+        # Auto-detect MiniMax provider
+        if not base_url and not api_key and not os.getenv("OPENAI_API_KEY") and os.getenv("MINIMAX_API_KEY"):
+            base_url = os.getenv("MINIMAX_BASE_URL", "https://api.minimax.io/v1")
+            if model == "gpt-4o":
+                model = os.getenv("MINIMAX_MODEL", "MiniMax-M2.5")
 
         logger.info(f"Initializing AgentCardGeneratorAgent with model: {model}")
-        self.client = OpenAI(api_key=self.api_key)
+        self.client = OpenAI(api_key=self.api_key, base_url=base_url)
         self.model = model
         self.tools = AgentAnalyzerTools()
         self.max_iterations = 10

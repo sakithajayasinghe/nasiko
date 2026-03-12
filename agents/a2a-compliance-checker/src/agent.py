@@ -2,6 +2,7 @@
 Core agent logic for translation.
 """
 import logging
+import os
 from typing import List, Dict, Any, Optional
 
 from langchain_openai import ChatOpenAI
@@ -13,16 +14,29 @@ from tools import extract_web_text
 
 logger = logging.getLogger(__name__)
 
+
+def _create_llm() -> ChatOpenAI:
+    """Create LLM instance, supporting OpenAI and MiniMax providers."""
+    if os.getenv('MINIMAX_API_KEY') and not os.getenv('OPENAI_API_KEY'):
+        return ChatOpenAI(
+            model=os.getenv('MINIMAX_MODEL', 'MiniMax-M2.5'),
+            temperature=1.0,
+            api_key=os.getenv('MINIMAX_API_KEY'),
+            base_url=os.getenv('MINIMAX_BASE_URL', 'https://api.minimax.io/v1'),
+        )
+    return ChatOpenAI(model="gpt-4o", temperature=0)
+
+
 class Agent:
     def __init__(self):
         # Initialize your agent
         self.name = "Translation Agent"
-        
+
         # Initialize Tools
         self.tools = [extract_web_text]
-        
+
         # Initialize LangChain components
-        self.llm = ChatOpenAI(model="gpt-4o", temperature=0)
+        self.llm = _create_llm()
         
         # System prompt tailored for text-to-text translation
         self.system_prompt = """You are a helpful assistant whose primary objective is to help the user with language translation.

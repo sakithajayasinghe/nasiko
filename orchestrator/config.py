@@ -24,6 +24,8 @@ class Config:
     
     # API Keys
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+    MINIMAX_API_KEY = os.getenv("MINIMAX_API_KEY", "")
+    MINIMAX_BASE_URL = os.getenv("MINIMAX_BASE_URL", "https://api.minimax.io/v1")
 
 # Legacy constants for backward compatibility
 DOCKER_NETWORK = Config.DOCKER_NETWORK

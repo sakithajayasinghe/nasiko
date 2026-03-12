@@ -14,6 +14,8 @@ class Config(BaseSettings):
     REDIS_DB: int = 0
     PHOENIX_SERVICE_URL: str = "http://phoenix-service.nasiko.svc.cluster.local:6006"
     OPENAI_API_KEY: str = "empty key"
+    MINIMAX_API_KEY: str = ""
+    MINIMAX_BASE_URL: str = "https://api.minimax.io/v1"
     BUILDKIT_ADDRESS: str = "tcp://buildkitd.buildkit.svc.cluster.local:1234"
     REGISTRY_URL: str = ""  # Set via environment variable during deployment
     GATEWAY_URL: str = ""  # Public gateway URL (e.g., http://<gateway-ip>)
