@@ -36,7 +36,7 @@ def main(host: str, port: int):
 
     if os.getenv('MINIMAX_API_KEY') and not os.getenv('OPENAI_API_KEY'):
         base_url = os.getenv('MINIMAX_BASE_URL', 'https://api.minimax.io/v1')
-        model = os.getenv('MINIMAX_MODEL', 'MiniMax-M2.5')
+        model = os.getenv('MINIMAX_MODEL', 'MiniMax-M2.7')
 
     if not api_key:
         raise ValueError(

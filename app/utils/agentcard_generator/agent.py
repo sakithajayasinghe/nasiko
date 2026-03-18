@@ -51,7 +51,7 @@ class AgentCardGeneratorAgent:
         if not base_url and not api_key and not os.getenv("OPENAI_API_KEY") and os.getenv("MINIMAX_API_KEY"):
             base_url = os.getenv("MINIMAX_BASE_URL", "https://api.minimax.io/v1")
             if model == "gpt-4o":
-                model = os.getenv("MINIMAX_MODEL", "MiniMax-M2.5")
+                model = os.getenv("MINIMAX_MODEL", "MiniMax-M2.7")
 
         logger.info(f"Initializing AgentCardGeneratorAgent with model: {model}")
         self.client = OpenAI(api_key=self.api_key, base_url=base_url)

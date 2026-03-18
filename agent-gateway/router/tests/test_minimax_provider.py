@@ -29,7 +29,7 @@ class TestRouterConfigMiniMax:
             "MINIMAX_API_KEY": "test-minimax-key",
             "MINIMAX_BASE_URL": "https://api.minimax.io/v1",
             "ROUTER_LLM_PROVIDER": "minimax",
-            "ROUTER_LLM_MODEL": "MiniMax-M2.5",
+            "ROUTER_LLM_MODEL": "MiniMax-M2.7",
         }
         from router.src.config.settings import RouterConfig
         config = RouterConfig(_env_file=None, **config_data)
@@ -64,13 +64,13 @@ class TestRoutingEngineLLMCreation:
         """When provider is 'minimax', correct model/temperature/base_url are used."""
         # Test the provider selection logic directly
         provider = "minimax"
-        model = "MiniMax-M2.5"
+        model = "MiniMax-M2.7"
         api_key = "test-key"
         base_url = "https://api.minimax.io/v1"
 
         if provider == "minimax":
             config = {
-                "model": model or "MiniMax-M2.5",
+                "model": model or "MiniMax-M2.7",
                 "temperature": 1.0,
                 "api_key": api_key,
                 "base_url": base_url,
@@ -82,7 +82,7 @@ class TestRoutingEngineLLMCreation:
                 "api_key": api_key,
             }
 
-        assert config["model"] == "MiniMax-M2.5"
+        assert config["model"] == "MiniMax-M2.7"
         assert config["temperature"] == 1.0
         assert config["api_key"] == "test-key"
         assert config["base_url"] == "https://api.minimax.io/v1"
@@ -95,7 +95,7 @@ class TestRoutingEngineLLMCreation:
 
         if provider == "minimax":
             config = {
-                "model": model or "MiniMax-M2.5",
+                "model": model or "MiniMax-M2.7",
                 "temperature": 1.0,
                 "api_key": api_key,
                 "base_url": "https://api.minimax.io/v1",
@@ -131,17 +131,17 @@ class TestRoutingEngineLLMCreation:
         assert temperature > 0
 
     def test_minimax_default_model_fallback(self):
-        """When model is empty string, MiniMax should fall back to MiniMax-M2.5."""
+        """When model is empty string, MiniMax should fall back to MiniMax-M2.7."""
         model = ""
-        result = model or "MiniMax-M2.5"
-        assert result == "MiniMax-M2.5"
+        result = model or "MiniMax-M2.7"
+        assert result == "MiniMax-M2.7"
 
     def test_openrouter_provider_selects_correct_config(self):
         """When provider is 'openrouter', correct base_url is used."""
         provider = "openrouter"
 
         if provider == "minimax":
-            base_url = "https://api.minimax.io/v1"
+            base_url = "https://api.minimax.io/v1"  # MiniMax-M2.7 default
         elif provider == "openrouter":
             base_url = "https://openrouter.ai/api/v1"
         else:
@@ -154,13 +154,24 @@ class TestMiniMaxModels:
     """Test MiniMax model configuration."""
 
     def test_default_minimax_model(self):
-        """Default MiniMax model should be MiniMax-M2.5."""
-        model = "MiniMax-M2.5"
-        assert model == "MiniMax-M2.5"
+        """Default MiniMax model should be MiniMax-M2.7."""
+        model = "MiniMax-M2.7"
+        assert model == "MiniMax-M2.7"
 
     def test_highspeed_model_available(self):
-        """MiniMax-M2.5-highspeed should be a valid model option."""
-        valid_models = ["MiniMax-M2.5", "MiniMax-M2.5-highspeed"]
+        """MiniMax-M2.7-highspeed should be a valid model option."""
+        valid_models = ["MiniMax-M2.7", "MiniMax-M2.7-highspeed", "MiniMax-M2.5", "MiniMax-M2.5-highspeed"]
+        assert "MiniMax-M2.7-highspeed" in valid_models
+
+    def test_m27_models_before_m25(self):
+        """M2.7 models should appear before M2.5 models in the list."""
+        valid_models = ["MiniMax-M2.7", "MiniMax-M2.7-highspeed", "MiniMax-M2.5", "MiniMax-M2.5-highspeed"]
+        assert valid_models.index("MiniMax-M2.7") < valid_models.index("MiniMax-M2.5")
+
+    def test_legacy_models_still_available(self):
+        """Previous M2.5 models should still be available."""
+        valid_models = ["MiniMax-M2.7", "MiniMax-M2.7-highspeed", "MiniMax-M2.5", "MiniMax-M2.5-highspeed"]
+        assert "MiniMax-M2.5" in valid_models
         assert "MiniMax-M2.5-highspeed" in valid_models
 
 
