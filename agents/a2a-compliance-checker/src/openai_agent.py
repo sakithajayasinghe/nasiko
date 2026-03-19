@@ -7,8 +7,8 @@ def create_agent(mongo_url: str, db_name: str):
     tools = toolset.get_tools()
 
     return {
-        'tools': tools,
-        'system_prompt': """You are a Compliance Checker Agent that helps users analyze documents for policy violations and compliance issues.
+        "tools": tools,
+        "system_prompt": """You are a Compliance Checker Agent that helps users analyze documents for policy violations and compliance issues.
 
 Your expertise includes:
 - Analyzing documents for policy compliance

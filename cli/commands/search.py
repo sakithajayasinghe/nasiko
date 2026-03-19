@@ -21,23 +21,22 @@ def search_users(query: str, limit: int = 10):
 
     try:
         client = get_api_client()
-        params = {
-            "q": query,
-            "limit": min(limit, 50)
-        }
+        params = {"q": query, "limit": min(limit, 50)}
 
         response = client.get(APIEndpoints.SEARCH_USERS, params=params)
         result = client.handle_response(response)
         if result is None:
             raise typer.Exit(1)
-            
+
         # Response format: {data: List[UserSearchResult], query, total_matches, showing, status_code, message}
-        users = result.get('data', [])
-        total_matches = result.get('total_matches', 0)
-        showing = result.get('showing', len(users))
+        users = result.get("data", [])
+        total_matches = result.get("total_matches", 0)
+        showing = result.get("showing", len(users))
 
         if users:
-            console.print(f"[bold magenta]User Search Results (showing {showing} of {total_matches} matches)[/bold magenta]\n")
+            console.print(
+                f"[bold magenta]User Search Results (showing {showing} of {total_matches} matches)[/bold magenta]\n"
+            )
 
             table = Table(show_header=True, header_style="bold magenta")
             table.add_column("Username", style="cyan", width=20)
@@ -48,11 +47,11 @@ def search_users(query: str, limit: int = 10):
 
             for user in users:
                 table.add_row(
-                    user.get('username', 'N/A'),
-                    user.get('id', 'N/A'),
-                    user.get('display_name', 'N/A'),
-                    user.get('email', 'N/A'),
-                    user.get('role', 'N/A')
+                    user.get("username", "N/A"),
+                    user.get("id", "N/A"),
+                    user.get("display_name", "N/A"),
+                    user.get("email", "N/A"),
+                    user.get("role", "N/A"),
                 )
 
             console.print(table)
@@ -75,23 +74,22 @@ def search_agents(query: str, limit: int = 10):
 
     try:
         client = get_api_client()
-        params = {
-            "q": query,
-            "limit": min(limit, 50)
-        }
+        params = {"q": query, "limit": min(limit, 50)}
 
         response = client.get(APIEndpoints.SEARCH_AGENTS, params=params)
         result = client.handle_response(response)
         if result is None:
             raise typer.Exit(1)
-            
+
         # Response format: {data: List[AgentSearchResult], query, total_matches, showing, status_code, message}
-        agents = result.get('data', [])
-        total_matches = result.get('total_matches', 0)
-        showing = result.get('showing', len(agents))
+        agents = result.get("data", [])
+        total_matches = result.get("total_matches", 0)
+        showing = result.get("showing", len(agents))
 
         if agents:
-            console.print(f"[bold magenta]Agent Search Results (showing {showing} of {total_matches} matches)[/bold magenta]\n")
+            console.print(
+                f"[bold magenta]Agent Search Results (showing {showing} of {total_matches} matches)[/bold magenta]\n"
+            )
 
             table = Table(show_header=True, header_style="bold magenta")
             table.add_column("Agent Name", style="cyan", width=20)
@@ -101,10 +99,10 @@ def search_agents(query: str, limit: int = 10):
             # table.add_column("Version", style="magenta", width=10)
 
             for agent in agents:
-                agent_name = agent.get('agent_name', 'N/A')
-                agent_id = agent.get('agent_id', 'N/A')
-                description = agent.get('description', 'N/A')
-                tags = agent.get('tags', [])
+                agent_name = agent.get("agent_name", "N/A")
+                agent_id = agent.get("agent_id", "N/A")
+                description = agent.get("description", "N/A")
+                tags = agent.get("tags", [])
                 # version = agent.get('version', 'N/A')
 
                 # # Truncate long descriptions
@@ -112,7 +110,7 @@ def search_agents(query: str, limit: int = 10):
                 #     description = description[:47] + "..."
 
                 # Format tags
-                tags_str = ', '.join(tags[:3]) if tags else 'N/A'
+                tags_str = ", ".join(tags[:3]) if tags else "N/A"
                 # if len(tags) > 3:
                 #     tags_str += "..."
 

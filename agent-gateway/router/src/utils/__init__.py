@@ -5,8 +5,8 @@ from .message_utils import extract_text_from_message
 
 __all__ = [
     "truncate_agent_cards",
-    "encode_file_to_filepart", 
+    "encode_file_to_filepart",
     "make_text_part",
     "construct_payload",
-    "extract_text_from_message"
+    "extract_text_from_message",
 ]

@@ -8,13 +8,13 @@ log = logging.getLogger(__name__)
 def encode_file_to_filepart(path: str) -> Dict[str, Any]:
     """
     Convert a local file into a FilePart with base64 bytes.
-    
+
     Args:
         path: File path to encode
-        
+
     Returns:
         Dictionary representing the file part
-        
+
     Raises:
         FileNotFoundError: If file doesn't exist
         PermissionError: If file can't be read
@@ -47,10 +47,10 @@ def encode_file_to_filepart(path: str) -> Dict[str, Any]:
 def make_text_part(text: str) -> Dict[str, str]:
     """
     Create a text part for agent messages.
-    
+
     Args:
         text: Text content
-        
+
     Returns:
         Dictionary representing the text part
     """

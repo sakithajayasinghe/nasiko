@@ -13,6 +13,7 @@ from app.entity.entity import (
     MessageResponse,
 )
 
+
 def create_chat_history_routes(handlers: HandlerFactory) -> APIRouter:
     """Create chat history routes"""
     router = APIRouter(prefix="/chat/session", tags=["chat_history"])
@@ -26,12 +27,14 @@ def create_chat_history_routes(handlers: HandlerFactory) -> APIRouter:
     async def create_session(
         request: CreateSessionRequest = Body(
             default_factory=CreateSessionRequest,
-            description="Session creation request with optional agent_id and agent_url"
+            description="Session creation request with optional agent_id and agent_url",
         ),
         user_id: str = Depends(get_user_id_from_token),
     ):
         """Create and return session id"""
-        return await handlers.chat_history.create_session(user_id, request.agent_id, request.agent_url)
+        return await handlers.chat_history.create_session(
+            user_id, request.agent_id, request.agent_url
+        )
 
     @router.delete(
         path="/{session_id}",

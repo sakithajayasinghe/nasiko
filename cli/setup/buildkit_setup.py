@@ -8,6 +8,7 @@ from pathlib import Path
 from kubernetes import config, client, utils
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
+
 try:
     from importlib.resources import files
 except ImportError:
@@ -17,22 +18,38 @@ except ImportError:
 app = typer.Typer(help="Deploy Rootless Buildkit on Kubernetes using YAML manifests")
 console = Console()
 
+
 def get_manifests_dir():
     """Get the path to BuildKit manifests directory."""
     # Try importlib.resources first (works when installed as package)
     try:
-        k8s_pkg = files('k8s')
-        manifests_path = k8s_pkg / 'charts' / 'nasiko-platform' / 'templates' / 'infrastructure' / 'buildkit'
+        k8s_pkg = files("k8s")
+        manifests_path = (
+            k8s_pkg
+            / "charts"
+            / "nasiko-platform"
+            / "templates"
+            / "infrastructure"
+            / "buildkit"
+        )
         # Convert to Path
         manifests_dir = Path(str(manifests_path))
         if manifests_dir.exists():
             return manifests_dir
     except Exception:
         pass
-    
+
     # Fallback: relative path (development mode)
     script_dir = Path(__file__).parent
-    manifests_dir = script_dir.parent / "k8s" / "charts" / "nasiko-platform" / "templates" / "infrastructure" / "buildkit"
+    manifests_dir = (
+        script_dir.parent
+        / "k8s"
+        / "charts"
+        / "nasiko-platform"
+        / "templates"
+        / "infrastructure"
+        / "buildkit"
+    )
 
     if not manifests_dir.exists():
         console.print(f"[red]❌ Manifests directory not found: {manifests_dir}[/]")
@@ -40,14 +57,16 @@ def get_manifests_dir():
 
     return manifests_dir
 
+
 def load_yaml_manifest(file_path):
     """Load and parse a YAML manifest file."""
     try:
-        with open(file_path, 'r') as f:
+        with open(file_path, "r") as f:
             return yaml.safe_load(f)
     except Exception as e:
         console.print(f"[red]❌ Error loading {file_path}: {e}[/]")
         sys.exit(1)
+
 
 def apply_manifest(k8s_client, manifest, desc):
     """Helper to apply a K8s object."""
@@ -55,8 +74,10 @@ def apply_manifest(k8s_client, manifest, desc):
         utils.create_from_dict(k8s_client, manifest)
         console.print(f"[green]✅ Created {desc}[/]")
     except utils.FailToCreateError as e:
-        if hasattr(e, "api_exceptions") and any(x.status == 409 for x in e.api_exceptions):
-             console.print(f"[yellow]ℹ️  {desc} already exists, skipping...[/]")
+        if hasattr(e, "api_exceptions") and any(
+            x.status == 409 for x in e.api_exceptions
+        ):
+            console.print(f"[yellow]ℹ️  {desc} already exists, skipping...[/]")
         else:
             console.print(f"[red]❌ Error creating {desc}: {e}[/]")
             sys.exit(1)
@@ -64,11 +85,12 @@ def apply_manifest(k8s_client, manifest, desc):
         console.print(f"[red]❌ Unexpected error: {e}[/]")
         sys.exit(1)
 
+
 def create_registry_secret(manifests_dir, k8s_client, registry, username, password):
     """Creates the Docker registry secret using the template manifest."""
 
     # Extract the registry domain
-    registry_domain = registry.split('/')[0]
+    registry_domain = registry.split("/")[0]
 
     # Create the Auth String (user:pass)
     auth_str = f"{username}:{password}"
@@ -80,7 +102,9 @@ def create_registry_secret(manifests_dir, k8s_client, registry, username, passwo
 
     # Replace placeholders in the dockerconfigjson
     docker_config_json = secret_manifest["stringData"][".dockerconfigjson"]
-    docker_config_json = docker_config_json.replace("REGISTRY_DOMAIN_PLACEHOLDER", registry_domain)
+    docker_config_json = docker_config_json.replace(
+        "REGISTRY_DOMAIN_PLACEHOLDER", registry_domain
+    )
     docker_config_json = docker_config_json.replace("AUTH_B64_PLACEHOLDER", auth_b64)
 
     # Parse and update the JSON properly
@@ -89,6 +113,7 @@ def create_registry_secret(manifests_dir, k8s_client, registry, username, passwo
 
     apply_manifest(k8s_client, secret_manifest, "Registry Secret 'regcred'")
 
+
 def update_deployment_for_auth_method(manifests_dir, has_credentials, iam_role_arn):
     """Update deployment manifest based on authentication method."""
     deployment_file = manifests_dir / "deployment.yaml"
@@ -96,7 +121,9 @@ def update_deployment_for_auth_method(manifests_dir, has_credentials, iam_role_a
 
     if iam_role_arn:
         # Use IAM role - update service account
-        deployment_manifest["spec"]["template"]["spec"]["serviceAccountName"] = "buildkit-sa"
+        deployment_manifest["spec"]["template"]["spec"][
+            "serviceAccountName"
+        ] = "buildkit-sa"
 
         # Remove docker config mount (using IAM instead)
         containers = deployment_manifest["spec"]["template"]["spec"]["containers"]
@@ -104,7 +131,8 @@ def update_deployment_for_auth_method(manifests_dir, has_credentials, iam_role_a
             # Remove docker config mount from volume mounts
             volume_mounts = containers[0].get("volumeMounts", [])
             containers[0]["volumeMounts"] = [
-                vm for vm in volume_mounts
+                vm
+                for vm in volume_mounts
                 if not (isinstance(vm, dict) and vm.get("name") == "docker-config")
             ]
 
@@ -119,7 +147,8 @@ def update_deployment_for_auth_method(manifests_dir, has_credentials, iam_role_a
         # Remove docker config volume
         volumes = deployment_manifest["spec"]["template"]["spec"].get("volumes", [])
         deployment_manifest["spec"]["template"]["spec"]["volumes"] = [
-            v for v in volumes
+            v
+            for v in volumes
             if not (isinstance(v, dict) and v.get("name") == "docker-config")
             and not (isinstance(v, str) and "DOCKER_CONFIG_VOLUME_PLACEHOLDER" in v)
         ]
@@ -133,11 +162,13 @@ def update_deployment_for_auth_method(manifests_dir, has_credentials, iam_role_a
             volume_mounts_updated = []
             for vm in volume_mounts:
                 if isinstance(vm, str) and "DOCKER_CONFIG_MOUNT_PLACEHOLDER" in vm:
-                    volume_mounts_updated.append({
-                        "name": "docker-config",
-                        "mountPath": "/home/user/.docker/config.json",
-                        "subPath": ".dockerconfigjson"
-                    })
+                    volume_mounts_updated.append(
+                        {
+                            "name": "docker-config",
+                            "mountPath": "/home/user/.docker/config.json",
+                            "subPath": ".dockerconfigjson",
+                        }
+                    )
                 else:
                     volume_mounts_updated.append(vm)
             containers[0]["volumeMounts"] = volume_mounts_updated
@@ -147,21 +178,26 @@ def update_deployment_for_auth_method(manifests_dir, has_credentials, iam_role_a
         volumes_updated = []
         for v in volumes:
             if isinstance(v, str) and "DOCKER_CONFIG_VOLUME_PLACEHOLDER" in v:
-                volumes_updated.append({
-                    "name": "docker-config",
-                    "secret": {
-                        "secretName": "regcred",
-                        "items": [{
-                            "key": ".dockerconfigjson",
-                            "path": ".dockerconfigjson"
-                        }]
+                volumes_updated.append(
+                    {
+                        "name": "docker-config",
+                        "secret": {
+                            "secretName": "regcred",
+                            "items": [
+                                {
+                                    "key": ".dockerconfigjson",
+                                    "path": ".dockerconfigjson",
+                                }
+                            ],
+                        },
                     }
-                })
+                )
             else:
                 volumes_updated.append(v)
         deployment_manifest["spec"]["template"]["spec"]["volumes"] = volumes_updated
 
     return deployment_manifest
+
 
 def update_serviceaccount_for_iam(manifests_dir, iam_role_arn):
     """Update service account with IAM role annotation if provided."""
@@ -171,16 +207,25 @@ def update_serviceaccount_for_iam(manifests_dir, iam_role_arn):
     if iam_role_arn:
         if "annotations" not in sa_manifest["metadata"]:
             sa_manifest["metadata"]["annotations"] = {}
-        sa_manifest["metadata"]["annotations"]["eks.amazonaws.com/role-arn"] = iam_role_arn
+        sa_manifest["metadata"]["annotations"][
+            "eks.amazonaws.com/role-arn"
+        ] = iam_role_arn
 
     return sa_manifest
 
+
 @app.command()
 def deploy(
-    registry: str = typer.Option(..., help="Registry URL (e.g., https://reg.example.com or ECR/DO registry)"),
-    username: str = typer.Option(None, help="Registry Username (not needed for AWS ECR with IRSA)"),
-    password: str = typer.Option(None, help="Registry Password (not needed for AWS ECR with IRSA)"),
-    iam_role_arn: str = typer.Option(None, help="AWS IAM Role ARN for IRSA")
+    registry: str = typer.Option(
+        ..., help="Registry URL (e.g., https://reg.example.com or ECR/DO registry)"
+    ),
+    username: str = typer.Option(
+        None, help="Registry Username (not needed for AWS ECR with IRSA)"
+    ),
+    password: str = typer.Option(
+        None, help="Registry Password (not needed for AWS ECR with IRSA)"
+    ),
+    iam_role_arn: str = typer.Option(None, help="AWS IAM Role ARN for IRSA"),
 ):
     """Deploy Rootless Buildkit to the Cluster using YAML manifests.
 
@@ -196,12 +241,18 @@ def deploy(
     has_iam_role = iam_role_arn is not None
 
     if not has_credentials and not has_iam_role:
-        console.print("[bold red]Error: Must provide either (--username and --password) OR --iam-role-arn[/]")
+        console.print(
+            "[bold red]Error: Must provide either (--username and --password) OR --iam-role-arn[/]"
+        )
         console.print("\n[yellow]Examples:[/]")
         console.print("  # For Harbor or DockerHub:")
-        console.print("  [cyan]--registry harbor.example.com --username admin --password secret[/]")
+        console.print(
+            "  [cyan]--registry harbor.example.com --username admin --password secret[/]"
+        )
         console.print("\n  # For AWS ECR with IRSA:")
-        console.print("  [cyan]--registry 123456.dkr.ecr.us-east-1.amazonaws.com --iam-role-arn arn:aws:iam::123456:role/buildkit-role[/]")
+        console.print(
+            "  [cyan]--registry 123456.dkr.ecr.us-east-1.amazonaws.com --iam-role-arn arn:aws:iam::123456:role/buildkit-role[/]"
+        )
         sys.exit(1)
 
     # Get manifests directory
@@ -224,15 +275,14 @@ def deploy(
         console.print("[bold red]❌ Failed to load kubeconfig![/]")
         console.print(f"[red]Error Details: {e}[/]")
         if kube_config_path and not os.path.exists(kube_config_path):
-             console.print(f"[yellow]⚠️  File not found at: {kube_config_path}[/]")
+            console.print(f"[yellow]⚠️  File not found at: {kube_config_path}[/]")
         sys.exit(1)
 
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
-        console=console
+        console=console,
     ) as progress:
-
         task = progress.add_task("Deploying Buildkit...", total=6)
 
         # 1. Create Namespace
@@ -247,7 +297,9 @@ def deploy(
 
         # 3. Create Registry Secret (only if credentials provided)
         if has_credentials:
-            create_registry_secret(manifests_dir, k8s_client, clean_registry, username, password)
+            create_registry_secret(
+                manifests_dir, k8s_client, clean_registry, username, password
+            )
             console.print("[dim]Using username/password authentication[/]")
         elif has_iam_role:
             console.print(f"[dim]Using IAM role authentication: {iam_role_arn}[/]")
@@ -264,7 +316,9 @@ def deploy(
         progress.advance(task)
 
         # 6. Create Deployment (updated for auth method)
-        deployment_manifest = update_deployment_for_auth_method(manifests_dir, has_credentials, iam_role_arn)
+        deployment_manifest = update_deployment_for_auth_method(
+            manifests_dir, has_credentials, iam_role_arn
+        )
         apply_manifest(k8s_client, deployment_manifest, "Deployment 'buildkitd'")
         progress.advance(task)
 
@@ -282,6 +336,7 @@ def deploy(
     1. Set env var: [cyan]BUILDKIT_HOST=tcp://buildkitd.buildkit.svc.cluster.local:1234[/]
     2. Ensure your job logic sets the image name to: [cyan]{clean_registry}/<your-project>/<image>:<tag>[/]
     """)
+
 
 if __name__ == "__main__":
     app()

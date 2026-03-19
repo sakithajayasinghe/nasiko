@@ -114,10 +114,9 @@ def _load_env_file_early():
             _load_dotenv_file(path, override=False)
             return
 
+
 # Create main CLI app
-app = typer.Typer(
-    help="Nasiko CLI - Build, deploy, and manage AI agents with ease"
-)
+app = typer.Typer(help="Nasiko CLI - Build, deploy, and manage AI agents with ease")
 
 
 def version_callback(value: bool):
@@ -125,6 +124,7 @@ def version_callback(value: bool):
     if value:
         try:
             from importlib.metadata import version
+
             __version__ = version("nasiko-cli")
         except Exception:
             __version__ = "2.0.0"  # fallback
@@ -136,11 +136,17 @@ def version_callback(value: bool):
 @app.callback()
 def callback(
     version: bool = typer.Option(
-        False, "--version", callback=version_callback, is_eager=True, help="Show version and exit"
+        False,
+        "--version",
+        callback=version_callback,
+        is_eager=True,
+        help="Show version and exit",
     ),
     # NOTE: Do not use "-c" here. "-c" is reserved for config files in setup commands
     # (e.g. `nasiko setup bootstrap -c .hackathon.env`).
-    cluster: str = typer.Option(None, "--cluster", "-n", help="Cluster name to use for this command")
+    cluster: str = typer.Option(
+        None, "--cluster", "-n", help="Cluster name to use for this command"
+    ),
 ):
     """Main CLI entry point."""
     if cluster:
@@ -151,11 +157,21 @@ def callback(
 # Top-level Authentication Commands (for convenience)
 @app.command(name="login")
 def login_cmd(
-    access_key: str = typer.Option(..., "--access-key", "-k", prompt="Access Key", help="Your access key"),
-    access_secret: str = typer.Option(..., "--access-secret", "-s", prompt="Access Secret", hide_input=True, help="Your access secret"),
+    access_key: str = typer.Option(
+        ..., "--access-key", "-k", prompt="Access Key", help="Your access key"
+    ),
+    access_secret: str = typer.Option(
+        ...,
+        "--access-secret",
+        "-s",
+        prompt="Access Secret",
+        hide_input=True,
+        help="Your access secret",
+    ),
 ):
     """Login to Nasiko."""
     from auth.auth_commands import login_standalone
+
     login_standalone(access_key, access_secret)
 
 
@@ -163,6 +179,7 @@ def login_cmd(
 def logout_cmd():
     """Logout from Nasiko."""
     from auth.auth_commands import logout_command
+
     logout_command()
 
 
@@ -170,6 +187,7 @@ def logout_cmd():
 def auth_status_cmd():
     """Check authentication status."""
     from auth.auth_commands import status_command
+
     status_command()
 
 
@@ -177,13 +195,17 @@ def auth_status_cmd():
 def whoami_cmd():
     """Show current user information."""
     from auth.auth_commands import whoami_command
+
     whoami_command()
+
 
 @app.command(name="docs")
 def api_docs():
     """Get API documentation and Swagger links."""
     from commands.registry import api_docs_command
+
     api_docs_command()
+
 
 @app.command(name="list-clusters")
 def list_clusters_cmd():
@@ -191,10 +213,10 @@ def list_clusters_cmd():
     from setup.config import list_clusters
     from rich.console import Console
     from rich.table import Table
-    
+
     console = Console()
     clusters = list_clusters()
-    
+
     if not clusters:
         console.print("[yellow]No clusters found.[/]")
         console.print("Use [bold]nasiko setup deploy[/] to create a new cluster.")
@@ -204,20 +226,21 @@ def list_clusters_cmd():
     table.add_column("Name", style="cyan", no_wrap=True)
     table.add_column("Provider", style="magenta")
     table.add_column("Gateway URL", style="green")
-    
+
     for cluster in clusters:
         table.add_row(
             cluster.get("name", "Unknown"),
             cluster.get("provider", "Unknown"),
-            cluster.get("url", "Unknown")
+            cluster.get("url", "Unknown"),
         )
-        
+
     console.print(table)
 
+
 app.add_typer(
-    setup.app, 
-    name="setup", 
-    help="Setup Nasiko cluster components (registry, k8s, etc.)."
+    setup.app,
+    name="setup",
+    help="Setup Nasiko cluster components (registry, k8s, etc.).",
 )
 
 
