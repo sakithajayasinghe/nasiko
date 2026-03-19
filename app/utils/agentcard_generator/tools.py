@@ -717,6 +717,7 @@ class AgentAnalyzerTools:
                 "google": "Google Generative AI",  # google.generativeai
                 "mistralai": "Mistral AI",
                 "cohere": "Cohere",
+                "minimax": "MiniMax",
             }
 
             for key, name in llm_sdks.items():

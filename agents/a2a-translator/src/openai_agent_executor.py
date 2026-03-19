@@ -30,13 +30,16 @@ class OpenAIAgentExecutor(AgentExecutor):
         tools: dict[str, Any],
         api_key: str,
         system_prompt: str,
+        base_url: str | None = None,
+        model: str = "gpt-4o",
     ):
         self._card = card
         self.tools = tools
         self.client = AsyncOpenAI(
             api_key=api_key,
+            base_url=base_url,
         )
-        self.model = "gpt-4o"
+        self.model = model
         self.system_prompt = system_prompt
 
     async def _process_request(

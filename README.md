@@ -170,6 +170,18 @@ User Query → Kong Gateway → Router Service → LangChain Analysis → Agent 
 Agent Request → Phoenix SDK → Trace Collection → Nasiko Web UI + Phoenix Dashboard → Performance Analytics
 ```
 
+### Supported LLM Providers
+
+Nasiko supports multiple LLM providers for both the routing engine and agent execution:
+
+| Provider | API Key Env Var | Base URL | Models |
+|----------|----------------|----------|--------|
+| OpenAI (default) | `OPENAI_API_KEY` | Default OpenAI endpoint | gpt-4o, gpt-4o-mini |
+| [MiniMax](https://platform.minimax.io) | `MINIMAX_API_KEY` | `https://api.minimax.io/v1` (global) / `https://api.minimaxi.com/v1` (China) | MiniMax-M2.7, MiniMax-M2.7-highspeed, MiniMax-M2.5, MiniMax-M2.5-highspeed |
+| OpenRouter | `OPENROUTER_API_KEY` | `https://openrouter.ai/api/v1` | Various models |
+
+To switch the router's LLM provider, set `ROUTER_LLM_PROVIDER` and `ROUTER_LLM_MODEL` in your environment configuration. See [Environment Configuration](#-environment-configuration).
+
 ### Key Components
 
 - **Kong Gateway** (9100) - API routing, load balancing, service discovery
@@ -480,8 +492,14 @@ nasiko status
 
 # API Keys (Optional but recommended)
 OPENAI_API_KEY=sk-your-openai-api-key
-GITHUB_CLIENT_ID=your-github-oauth-client-id  
+MINIMAX_API_KEY=your-minimax-api-key
+GITHUB_CLIENT_ID=your-github-oauth-client-id
 GITHUB_CLIENT_SECRET=your-github-oauth-secret
+
+# Router LLM Provider (Optional - defaults to openai)
+# Supported: "openai", "openrouter", "minimax"
+# ROUTER_LLM_PROVIDER=openai
+# ROUTER_LLM_MODEL=gpt-4o-mini
 
 # Security (Change in production)
 JWT_SECRET=your-jwt-signing-secret

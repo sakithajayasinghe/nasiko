@@ -18,7 +18,14 @@ class RouterConfig(BaseSettings):
     NASIKO_BACKEND: str = "http://nasiko-backend:8000/api/v1"
     OPENAI_API_KEY: Optional[str] = None
     OPENROUTER_API_KEY: Optional[str] = None
+    MINIMAX_API_KEY: Optional[str] = None
+    MINIMAX_BASE_URL: str = "https://api.minimax.io/v1"
     OLLAMA_SERVER: str = "http://ollama:11434"
+
+    # LLM Provider selection for the router
+    # Supported values: "openai", "openrouter", "minimax"
+    ROUTER_LLM_PROVIDER: str = "openai"
+    ROUTER_LLM_MODEL: str = "gpt-4o-mini"
 
     # Vector store settings
     VECTOR_STORE_CACHE_TTL: int = 3600

@@ -32,19 +32,36 @@ class RoutingEngine:
         self.embedding_model = self._create_embedding_model()
 
     def _create_llm(self) -> ChatOpenAI:
-        """Create LLM instance for routing decisions."""
-        # return ChatOpenAI(
-        #     model="google/gemini-2.5-flash",
-        #     temperature=0,
-        #     api_key=settings.OPENROUTER_API_KEY,
-        #     base_url="https://openrouter.ai/api/v1",
-        # ).with_structured_output(RouterOutput)
+        """Create LLM instance for routing decisions.
 
-        return ChatOpenAI(
-            model="gpt-4o-mini",
-            temperature=0,
-            api_key=settings.OPENAI_API_KEY,
-        ).with_structured_output(RouterOutput)
+        Supports multiple providers via ROUTER_LLM_PROVIDER setting:
+        - "openai": Uses OpenAI API (default)
+        - "openrouter": Uses OpenRouter API
+        - "minimax": Uses MiniMax OpenAI-compatible API
+        """
+        provider = settings.ROUTER_LLM_PROVIDER.lower()
+        model = settings.ROUTER_LLM_MODEL
+
+        if provider == "minimax":
+            return ChatOpenAI(
+                model=model or "MiniMax-M2.7",
+                temperature=1.0,
+                api_key=settings.MINIMAX_API_KEY,
+                base_url=settings.MINIMAX_BASE_URL,
+            ).with_structured_output(RouterOutput)
+        elif provider == "openrouter":
+            return ChatOpenAI(
+                model=model or "google/gemini-2.5-flash",
+                temperature=0,
+                api_key=settings.OPENROUTER_API_KEY,
+                base_url="https://openrouter.ai/api/v1",
+            ).with_structured_output(RouterOutput)
+        else:
+            return ChatOpenAI(
+                model=model or "gpt-4o-mini",
+                temperature=0,
+                api_key=settings.OPENAI_API_KEY,
+            ).with_structured_output(RouterOutput)
 
     def _create_embedding_model(self) -> OpenAIEmbeddings:
         """Create OpenAI embeddings instance."""
