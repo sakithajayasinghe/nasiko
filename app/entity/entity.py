@@ -1,7 +1,6 @@
 from datetime import datetime, timezone
 from enum import Enum
 from typing import List, Optional, Any, Dict
-from uuid import UUID, uuid4
 
 from bson import ObjectId
 from pydantic import BaseModel, Field, GetCoreSchemaHandler
@@ -32,6 +31,7 @@ class PyObjectId(ObjectId):
     @classmethod
     def __get_pydantic_json_schema__(cls, core_schema, handler):
         return handler(core_schema)
+
 
 class Skill(BaseModel):
     id: str
@@ -74,7 +74,7 @@ class RegistryBase(BaseModel):
     supportsAuthenticatedExtendedCard: bool = False
     signatures: List[Any] = []
     additionalInterfaces: Optional[List[Dict[str, str]]] = None
-    
+
     # Combined tags from all skills (deduplicated)
     tags: List[str] = []
 
@@ -87,7 +87,7 @@ class RegistryBase(BaseModel):
 
 
 class RegistryInDB(RegistryBase):
-    # MongoDB document ID (separate from agent ID) 
+    # MongoDB document ID (separate from agent ID)
     _id: Optional[str] = None
 
     model_config = {
@@ -106,18 +106,20 @@ class UploadStatus(str, Enum):
     COMPLETED = "completed"
     FAILED = "failed"
 
+
 class BuildStatus(str, Enum):
     QUEUED = "queued"
     BUILDING = "building"
     SUCCESS = "success"
     FAILED = "failed"
 
+
 class AgentBuildBase(BaseModel):
     agent_id: str  # Reference to the Registry ID
     github_url: Optional[str] = None
     commit_hash: Optional[str] = None
-    version_tag: str # e.g., v1.0.0
-    image_reference: str # e.g., harbor.nasiko.io/agents/my-agent:v1.0.0
+    version_tag: str  # e.g., v1.0.0
+    image_reference: str  # e.g., harbor.nasiko.io/agents/my-agent:v1.0.0
 
     status: BuildStatus = BuildStatus.QUEUED
     k8s_job_name: Optional[str] = None
@@ -126,8 +128,10 @@ class AgentBuildBase(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+
 class AgentBuildInDB(AgentBuildBase):
     id: str = Field(default_factory=lambda: str(ObjectId()), alias="_id")
+
 
 class DeploymentStatus(str, Enum):
     STARTING = "starting"
@@ -135,20 +139,26 @@ class DeploymentStatus(str, Enum):
     STOPPED = "stopped"
     FAILED = "failed"
 
+
 class AgentDeploymentBase(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()), alias="_id")
     agent_id: str
-    build_id: str # Link to the specific build used
+    build_id: str  # Link to the specific build used
     namespace: str = "nasiko-agents"
     replicas: int = 1
     status: DeploymentStatus = DeploymentStatus.STARTING
-    service_url: Optional[str] = None # The internal K8s DNS
+    service_url: Optional[str] = None  # The internal K8s DNS
 
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+
 class CreateSessionRequest(BaseModel):
-    agent_id: Optional[str] = Field(None, description="Optional agent ID to associate with session")
-    agent_url: Optional[str] = Field(None, description="Optional agent URL for direct communication")
+    agent_id: Optional[str] = Field(
+        None, description="Optional agent ID to associate with session"
+    )
+    agent_url: Optional[str] = Field(
+        None, description="Optional agent URL for direct communication"
+    )
 
 
 class SessionData(BaseModel):

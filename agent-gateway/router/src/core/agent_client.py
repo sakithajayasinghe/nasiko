@@ -3,7 +3,7 @@ Agent client service for communicating with selected agents.
 """
 
 import logging
-from typing import Dict, List, Tuple, Any, Optional
+from typing import Dict, List, Tuple, Any
 
 import httpx
 from router.src.config import settings
@@ -27,13 +27,13 @@ class AgentClient:
     def _translate_agent_url(self, agent_url: str) -> str:
         """
         Translate external agent URLs to internal Docker network URLs for local deployment.
-        
-        Converts localhost:9100 (external Kong Gateway access) to kong-gateway:8000 
+
+        Converts localhost:9100 (external Kong Gateway access) to kong-gateway:8000
         (internal Docker network access) when running in local Docker deployment.
-        
+
         Args:
             agent_url: Original agent URL from registry
-            
+
         Returns:
             Translated URL suitable for internal container communication
         """
@@ -79,7 +79,9 @@ class AgentClient:
                 logger.debug("Added Authorization header for agent request")
 
             async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.post(translated_url, json=payload, headers=headers)
+                response = await client.post(
+                    translated_url, json=payload, headers=headers
+                )
                 response.raise_for_status()
 
             data = response.json()
@@ -197,7 +199,7 @@ class AgentClient:
         try:
             # Translate agent URL for internal Docker network communication
             translated_url = self._translate_agent_url(agent_url)
-            
+
             # Construct health check URL (assuming /health endpoint)
             health_url = f"{translated_url.rstrip('/')}/health"
 

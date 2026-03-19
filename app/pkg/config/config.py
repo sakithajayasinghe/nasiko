@@ -1,10 +1,10 @@
 from pydantic_settings import BaseSettings
-from pathlib import Path
+
 
 class Config(BaseSettings):
     ENV: str = "development"
     MONGO_NASIKO_USER: str = "admin"
-    MONGO_AUTH_SOURCE: str = "admin"  
+    MONGO_AUTH_SOURCE: str = "admin"
     MONGO_NASIKO_PASSWORD: str = "password"
     MONGO_NASIKO_HOST: str = "localhost"
     MONGO_NASIKO_PORT: str = "27017"
@@ -35,15 +35,16 @@ class Config(BaseSettings):
     @property
     def MONGO_URI(self) -> str:
         return f"mongodb://{self.MONGO_NASIKO_USER}:{self.MONGO_NASIKO_PASSWORD}@{self.MONGO_NASIKO_HOST}:{self.MONGO_NASIKO_PORT}/{self.MONGO_NASIKO_DATABASE}?authSource={self.MONGO_AUTH_SOURCE}"
-    
+
     @property
     def MONGO_DB(self) -> str:
         return self.MONGO_NASIKO_DATABASE
-    
+
     model_config = {
         "env_file": [".env", "app/.env"],
         "env_file_encoding": "utf-8",
-        "case_sensitive": False
+        "case_sensitive": False,
     }
+
 
 settings = Config()

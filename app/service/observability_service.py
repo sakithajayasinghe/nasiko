@@ -9,80 +9,97 @@ import re
 class ObservabilityService:
     def __init__(self, logger):
         self.logger = logger
-    
+
     def _camel_to_snake(self, name: str) -> str:
         """Convert camelCase to snake_case"""
-        s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
-        return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
-    
+        s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
+        return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
+
     def _convert_keys_to_snake_case(self, data: Any) -> Any:
         """Recursively convert all dictionary keys from camelCase to snake_case"""
         if isinstance(data, dict):
-            return {self._camel_to_snake(k): self._convert_keys_to_snake_case(v) for k, v in data.items()}
+            return {
+                self._camel_to_snake(k): self._convert_keys_to_snake_case(v)
+                for k, v in data.items()
+            }
         elif isinstance(data, list):
             return [self._convert_keys_to_snake_case(item) for item in data]
         else:
             return data
 
-# Removed Pydantic conversion methods since we now return dictionaries directly
+    # Removed Pydantic conversion methods since we now return dictionaries directly
 
-    async def get_all_sessions(self, user_id: str, auth_header: str, start_time: str = None) -> Dict[str, Any]:
+    async def get_all_sessions(
+        self, user_id: str, auth_header: str, start_time: str = None
+    ) -> Dict[str, Any]:
         """Get sessions from all agents/projects the user has access to"""
         try:
             from app.pkg.auth import AuthClient
-            
+
             # Step 1: Get all user-accessible agent IDs using existing auth functions
             auth_client = AuthClient()
-            accessible_agent_ids = await auth_client.get_user_accessible_agents(auth_header)
-            
+            accessible_agent_ids = await auth_client.get_user_accessible_agents(
+                auth_header
+            )
+
             if not accessible_agent_ids:
                 return {
                     "data": {
                         "sessions": [],
                         "total_agents": 0,
-                        "pagination": {"end_cursor": None, "has_next_page": False}
+                        "pagination": {"end_cursor": None, "has_next_page": False},
                     }
                 }
-            
-            self.logger.info(f"Found {len(accessible_agent_ids)} accessible agents for user {user_id}")
-            
+
+            self.logger.info(
+                f"Found {len(accessible_agent_ids)} accessible agents for user {user_id}"
+            )
+
             # Step 2: Get sessions from each agent's project
             all_sessions = []
             successful_agents = 0
-            
+
             for agent_id in accessible_agent_ids:
                 try:
                     # Use agent_id as project_name to get Phoenix project ID
                     project_id = await self._get_project_id(agent_id)
-                    
+
                     if project_id:
-                        project_sessions = await self._get_project_sessions_for_aggregation(project_id, agent_id, start_time)
+                        project_sessions = (
+                            await self._get_project_sessions_for_aggregation(
+                                project_id, agent_id, start_time
+                            )
+                        )
                         all_sessions.extend(project_sessions)
                         successful_agents += 1
                 except Exception as e:
-                    self.logger.warning(f"Failed to get sessions for agent {agent_id}: {e}")
+                    self.logger.warning(
+                        f"Failed to get sessions for agent {agent_id}: {e}"
+                    )
                     continue
-            
+
             # Step 3: Sort sessions by start time (most recent first)
-            all_sessions.sort(key=lambda x: x.get('start_time', ''), reverse=True)
-            
+            all_sessions.sort(key=lambda x: x.get("start_time", ""), reverse=True)
+
             return {
                 "data": {
                     "sessions": all_sessions,
                     "total_agents": len(accessible_agent_ids),
                     "successful_agents": successful_agents,
-                    "pagination": {"end_cursor": None, "has_next_page": False}
+                    "pagination": {"end_cursor": None, "has_next_page": False},
                 }
             }
-            
+
         except Exception as e:
             self.logger.error(f"Error getting all sessions: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to retrieve sessions: {str(e)}"
+                detail=f"Failed to retrieve sessions: {str(e)}",
             )
 
-    async def _get_project_sessions_for_aggregation(self, project_id: str, agent_id: str, start_time: str = None) -> List[Dict[str, Any]]:
+    async def _get_project_sessions_for_aggregation(
+        self, project_id: str, agent_id: str, start_time: str = None
+    ) -> List[Dict[str, Any]]:
         """Get sessions for a specific project using the GraphQL query for aggregation"""
         try:
             # Build time range for query - use provided start_time or default to last 7 days
@@ -91,9 +108,10 @@ class ObservabilityService:
             else:
                 # Default to last 7 days if no start_time provided
                 from datetime import datetime, timedelta
+
                 default_start = datetime.utcnow() - timedelta(days=7)
                 query_time_range = {"start": default_start.isoformat() + "Z"}
-            
+
             query = """
             query ProjectPageQueriesSessionsQuery($id: ID!, $timeRange: TimeRange!) {
                 project: node(id: $id) {
@@ -157,18 +175,15 @@ class ObservabilityService:
                 }
             }
             """
-            
-            variables = {
-                "id": project_id,
-                "timeRange": query_time_range
-            }
-            
+
+            variables = {"id": project_id, "timeRange": query_time_range}
+
             raw_response = await self._execute_graphql_query(query, variables)
-            
+
             # Transform response to snake_case
             project_data = raw_response.get("data", {}).get("project", {})
             sessions_data = project_data.get("sessions", {}).get("edges", [])
-            
+
             sessions = []
             for edge in sessions_data:
                 session_data = edge.get("session", {})
@@ -177,10 +192,10 @@ class ObservabilityService:
                     session_snake = self._convert_keys_to_snake_case(session_data)
                     session_snake["agent_id"] = agent_id
                     sessions.append(session_snake)
-            
+
             self.logger.info(f"Retrieved {len(sessions)} sessions for agent {agent_id}")
             return sessions
-            
+
         except Exception as e:
             self.logger.error(f"Error getting sessions for agent {agent_id}: {e}")
             return []
@@ -190,20 +205,20 @@ class ObservabilityService:
         try:
             # Step 1: Get session ID by session string
             session_node_id = await self._get_session_node_id(session_id)
-            
+
             # Step 2: Get session details
             raw_session_details = await self._get_session_details_by_id(session_node_id)
-            
+
             # Transform session response for better client consumption
             return self._transform_session_response(raw_session_details)
-            
+
         except HTTPException:
             raise
         except Exception as e:
             self.logger.error(f"Unexpected error in get_session_details: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Internal server error: {str(e)}"
+                detail=f"Internal server error: {str(e)}",
             )
 
     async def get_trace_details(self, trace_id: str, project_id: str) -> Dict[str, Any]:
@@ -292,24 +307,21 @@ class ObservabilityService:
               id
             }
             """
-            
-            variables = {
-                "traceId": trace_id,
-                "id": project_id
-            }
-            
+
+            variables = {"traceId": trace_id, "id": project_id}
+
             raw_response = await self._execute_graphql_query(query, variables)
-            
+
             # Transform the response to have nested spans structure
             return self._transform_trace_response(raw_response)
-            
+
         except HTTPException:
             raise
         except Exception as e:
             self.logger.error(f"Unexpected error in get_trace_details: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Internal server error: {str(e)}"
+                detail=f"Internal server error: {str(e)}",
             )
 
     async def get_span_details(self, span_id: str) -> Dict[str, Any]:
@@ -574,49 +586,49 @@ class ObservabilityService:
               ...AnnotationSummaryGroup
             }
             """
-            
+
             variables = {"id": span_id}
-            
+
             raw_response = await self._execute_graphql_query(query, variables)
-            
+
             # Transform span response for better client consumption
             return self._transform_span_response(raw_response)
-            
+
         except HTTPException:
             raise
         except Exception as e:
             self.logger.error(f"Unexpected error in get_span_details: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Internal server error: {str(e)}"
+                detail=f"Internal server error: {str(e)}",
             )
 
     async def _get_project_id(self, project_name: str) -> str:
         """Get project ID by project name"""
         url = f"{settings.PHOENIX_SERVICE_URL}/v1/projects/{project_name}"
-        
+
         try:
             response = requests.get(url, timeout=30)
-            
+
             if response.status_code == 404:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Project '{project_name}' not found"
+                    detail=f"Project '{project_name}' not found",
                 )
             elif response.status_code != 200:
                 raise HTTPException(
                     status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail=f"Failed to get project ID: {response.status_code}"
+                    detail=f"Failed to get project ID: {response.status_code}",
                 )
-            
+
             data = response.json()
             return data["data"]["id"]
-            
+
         except requests.exceptions.RequestException as e:
             self.logger.error(f"Network error while getting project ID: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"Network error connecting to Phoenix: {str(e)}"
+                detail=f"Network error connecting to Phoenix: {str(e)}",
             )
 
     async def _get_session_node_id(self, session_id: str) -> str:
@@ -628,17 +640,17 @@ class ObservabilityService:
             }
           }
         """
-        
+
         variables = {"sessionId": session_id}
-        
+
         response = await self._execute_graphql_query(query, variables)
-        
+
         if not response.get("data", {}).get("getProjectSessionById"):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Session '{session_id}' not found"
+                detail=f"Session '{session_id}' not found",
             )
-        
+
         return response["data"]["getProjectSessionById"]["id"]
 
     async def _get_session_details_by_id(self, session_node_id: str) -> Dict[str, Any]:
@@ -777,50 +789,49 @@ class ObservabilityService:
           id
         }
         """
-        
+
         variables = {
             "id": session_node_id,
-            "first": 100  # Increased to ensure we get traces
+            "first": 100,  # Increased to ensure we get traces
         }
-        
+
         return await self._execute_graphql_query(query, variables)
 
-    async def _execute_graphql_query(self, query: str, variables: Dict[str, Any]) -> Dict[str, Any]:
+    async def _execute_graphql_query(
+        self, query: str, variables: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Execute a GraphQL query against Phoenix service"""
         url = f"{settings.PHOENIX_SERVICE_URL}/graphql"
-        
-        payload = {
-            "query": query,
-            "variables": variables
-        }
-        
-        headers = {
-            "Content-Type": "application/json"
-        }
-        
+
+        payload = {"query": query, "variables": variables}
+
+        headers = {"Content-Type": "application/json"}
+
         try:
             response = requests.post(url, json=payload, headers=headers, timeout=30)
-            
+
             if response.status_code != 200:
                 raise HTTPException(
                     status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail=f"GraphQL request failed: {response.status_code} - {response.text}"
+                    detail=f"GraphQL request failed: {response.status_code} - {response.text}",
                 )
-            
+
             return response.json()
-            
+
         except requests.exceptions.RequestException as e:
             self.logger.error(f"Network error during GraphQL request: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"Network error connecting to Phoenix: {str(e)}"
+                detail=f"Network error connecting to Phoenix: {str(e)}",
             )
 
     def _transform_trace_response(self, raw_response: Dict[str, Any]) -> Dict[str, Any]:
         """Transform the flat spans structure into a nested tree structure"""
         try:
             # Extract the trace data
-            trace_data = raw_response.get("data", {}).get("project", {}).get("trace", {})
+            trace_data = (
+                raw_response.get("data", {}).get("project", {}).get("trace", {})
+            )
             if not trace_data:
                 return self._convert_keys_to_snake_case(raw_response)
 
@@ -832,7 +843,7 @@ class ObservabilityService:
             # Create a dictionary for quick span lookup by spanId
             spans_by_span_id = {}
             spans_by_id = {}
-            
+
             # Process all spans and create clean span objects
             for edge in span_edges:
                 span = edge.get("span", {})
@@ -841,7 +852,7 @@ class ObservabilityService:
                     cleaned_span = self._clean_span_data(span)
                     span_id = span.get("spanId")
                     node_id = span.get("id")
-                    
+
                     if span_id:
                         spans_by_span_id[span_id] = cleaned_span
                     if node_id:
@@ -851,8 +862,12 @@ class ObservabilityService:
             nested_spans = self._build_span_tree(spans_by_span_id)
 
             # Convert main trace data to snake_case
-            cost_summary = self._convert_keys_to_snake_case(trace_data.get("costSummary", {}))
-            root_spans = self._convert_keys_to_snake_case(trace_data.get("rootSpans", {}))
+            cost_summary = self._convert_keys_to_snake_case(
+                trace_data.get("costSummary", {})
+            )
+            root_spans = self._convert_keys_to_snake_case(
+                trace_data.get("rootSpans", {})
+            )
 
             # Return transformed response directly as dictionary with snake_case fields
             return {
@@ -865,14 +880,18 @@ class ObservabilityService:
                         "cost_summary": cost_summary,
                         "root_spans": root_spans,
                         "spans": nested_spans,  # This is now the nested structure with snake_case
-                        "span_lookup": spans_by_id  # Keep flat lookup for span details access
+                        "span_lookup": spans_by_id,  # Keep flat lookup for span details access
                     },
-                    "project_id": raw_response.get("data", {}).get("project", {}).get("id")
+                    "project_id": raw_response.get("data", {})
+                    .get("project", {})
+                    .get("id"),
                 }
             }
 
         except Exception as e:
-            self.logger.warning(f"Failed to transform trace response: {str(e)}, returning raw response")
+            self.logger.warning(
+                f"Failed to transform trace response: {str(e)}, returning raw response"
+            )
             return self._convert_keys_to_snake_case(raw_response)
 
     def _clean_span_data(self, span: Dict[str, Any]) -> Dict[str, Any]:
@@ -888,19 +907,23 @@ class ObservabilityService:
             "parent_id": span.get("parentId"),
             "latency_ms": span.get("latencyMs"),
             "token_count_total": span.get("tokenCountTotal"),
-            "span_annotation_summaries": self._convert_keys_to_snake_case(span.get("spanAnnotationSummaries", [])),
-            "children": []  # Will be populated during tree building
+            "span_annotation_summaries": self._convert_keys_to_snake_case(
+                span.get("spanAnnotationSummaries", [])
+            ),
+            "children": [],  # Will be populated during tree building
         }
         return cleaned
 
-    def _build_span_tree(self, spans_by_span_id: Dict[str, Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _build_span_tree(
+        self, spans_by_span_id: Dict[str, Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
         """Build a nested tree structure from flat spans using parentId relationships"""
         root_spans = []
-        
+
         # First pass: identify root spans (no parent_id) and attach children
         for span_id, span in spans_by_span_id.items():
             parent_id = span.get("parent_id")
-            
+
             if parent_id is None:
                 # This is a root span
                 root_spans.append(span)
@@ -911,7 +934,9 @@ class ObservabilityService:
                     parent_span["children"].append(span)
                 else:
                     # Parent not found, treat as root (orphaned span)
-                    self.logger.warning(f"Orphaned span found: {span_id} with parent {parent_id}")
+                    self.logger.warning(
+                        f"Orphaned span found: {span_id} with parent {parent_id}"
+                    )
                     root_spans.append(span)
 
         # Sort spans by start time for better readability
@@ -924,7 +949,9 @@ class ObservabilityService:
         sort_spans_recursive(root_spans)
         return root_spans
 
-    def _transform_session_response(self, raw_response: Dict[str, Any]) -> Dict[str, Any]:
+    def _transform_session_response(
+        self, raw_response: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Transform session response for better client consumption"""
         try:
             session_data = raw_response.get("data", {}).get("session", {})
@@ -940,7 +967,7 @@ class ObservabilityService:
                             "cost_summary": {},
                             "latency_p50": None,
                             "traces": [],
-                            "pagination": {"end_cursor": None, "has_next_page": False}
+                            "pagination": {"end_cursor": None, "has_next_page": False},
                         }
                     }
                 }
@@ -949,9 +976,9 @@ class ObservabilityService:
             traces_connection = session_data.get("traces", {})
             traces_edges = traces_connection.get("edges", [])
             cleaned_traces = []
-            
+
             self.logger.info(f"Processing {len(traces_edges)} trace edges")
-            
+
             for edge in traces_edges:
                 try:
                     trace = edge.get("trace", {})
@@ -965,54 +992,74 @@ class ObservabilityService:
                                     "id": root_span.get("id"),
                                     "spanId": root_span.get("spanId"),
                                     "attributes": root_span.get("attributes"),
-                                    "cumulativeTokenCountTotal": root_span.get("cumulativeTokenCountTotal"),
+                                    "cumulativeTokenCountTotal": root_span.get(
+                                        "cumulativeTokenCountTotal"
+                                    ),
                                     "latencyMs": root_span.get("latencyMs"),
                                     "startTime": root_span.get("startTime"),
-                                    "spanAnnotations": root_span.get("spanAnnotations", []),
-                                    "spanAnnotationSummaries": root_span.get("spanAnnotationSummaries", [])
+                                    "spanAnnotations": root_span.get(
+                                        "spanAnnotations", []
+                                    ),
+                                    "spanAnnotationSummaries": root_span.get(
+                                        "spanAnnotationSummaries", []
+                                    ),
                                 }
-                                
+
                                 # Handle project field carefully - model expects Dict[str, str]
                                 project = root_span.get("project")
                                 if project and isinstance(project, dict):
                                     cleaned_root_span["project"] = {
                                         "id": str(project.get("id", ""))
                                     }
-                                
+
                                 # Handle input/output fields - model expects Dict[str, str]
                                 input_data = root_span.get("input")
                                 if input_data and isinstance(input_data, dict):
-                                    cleaned_root_span["input"] = {k: str(v) if v is not None else "" for k, v in input_data.items()}
-                                
+                                    cleaned_root_span["input"] = {
+                                        k: str(v) if v is not None else ""
+                                        for k, v in input_data.items()
+                                    }
+
                                 output_data = root_span.get("output")
                                 if output_data and isinstance(output_data, dict):
-                                    cleaned_root_span["output"] = {k: str(v) if v is not None else "" for k, v in output_data.items()}
-                                
+                                    cleaned_root_span["output"] = {
+                                        k: str(v) if v is not None else ""
+                                        for k, v in output_data.items()
+                                    }
+
                                 # Handle trace field
                                 trace_data = root_span.get("trace")
                                 if trace_data and isinstance(trace_data, dict):
-                                    cleaned_trace_data = {
-                                        "id": trace_data.get("id")
-                                    }
+                                    cleaned_trace_data = {"id": trace_data.get("id")}
                                     cost_summary = trace_data.get("costSummary")
                                     if cost_summary:
-                                        cleaned_trace_data["costSummary"] = self._convert_keys_to_snake_case(cost_summary)
+                                        cleaned_trace_data["costSummary"] = (
+                                            self._convert_keys_to_snake_case(
+                                                cost_summary
+                                            )
+                                        )
                                     cleaned_root_span["trace"] = cleaned_trace_data
-                                
+
                                 root_span = cleaned_root_span
                             except Exception as e:
-                                self.logger.warning(f"Failed to clean rootSpan data: {e}")
+                                self.logger.warning(
+                                    f"Failed to clean rootSpan data: {e}"
+                                )
                                 # Fall back to basic conversion or original
                                 root_span = trace.get("rootSpan")
-                        
+
                         cleaned_trace = {
                             "id": trace.get("id"),
-                            "traceId": trace.get("traceId"),  # Use alias name for Pydantic
+                            "traceId": trace.get(
+                                "traceId"
+                            ),  # Use alias name for Pydantic
                             "rootSpan": root_span,  # Use alias name for Pydantic
-                            "cursor": edge.get("cursor")
+                            "cursor": edge.get("cursor"),
                         }
                         cleaned_traces.append(cleaned_trace)
-                        self.logger.debug(f"Successfully processed trace: {trace.get('id')}")
+                        self.logger.debug(
+                            f"Successfully processed trace: {trace.get('id')}"
+                        )
                     else:
                         self.logger.warning(f"Empty trace in edge: {edge}")
                 except Exception as e:
@@ -1022,10 +1069,16 @@ class ObservabilityService:
             self.logger.info(f"Cleaned {len(cleaned_traces)} traces")
 
             # Convert field names to snake_case and clean traces
-            token_usage = self._convert_keys_to_snake_case(session_data.get("tokenUsage", {}))
-            cost_summary = self._convert_keys_to_snake_case(session_data.get("costSummary", {}))
-            page_info = self._convert_keys_to_snake_case(traces_connection.get("pageInfo", {}))
-            
+            token_usage = self._convert_keys_to_snake_case(
+                session_data.get("tokenUsage", {})
+            )
+            cost_summary = self._convert_keys_to_snake_case(
+                session_data.get("costSummary", {})
+            )
+            page_info = self._convert_keys_to_snake_case(
+                traces_connection.get("pageInfo", {})
+            )
+
             # Convert traces to snake_case as well
             cleaned_traces_snake = []
             for trace in cleaned_traces:
@@ -1043,42 +1096,74 @@ class ObservabilityService:
                         "cost_summary": cost_summary,
                         "latency_p50": session_data.get("latencyP50"),
                         "traces": cleaned_traces_snake,
-                        "pagination": page_info if page_info else {"end_cursor": None, "has_next_page": False}
+                        "pagination": (
+                            page_info
+                            if page_info
+                            else {"end_cursor": None, "has_next_page": False}
+                        ),
                     }
                 }
             }
 
         except Exception as e:
-            self.logger.warning(f"Failed to transform session response: {str(e)}, returning fallback response")
+            self.logger.warning(
+                f"Failed to transform session response: {str(e)}, returning fallback response"
+            )
             # If transformation fails, create a minimal valid response structure
             fallback_response = {
                 "data": {
                     "session": {
-                        "id": session_data.get("id", "") if 'session_data' in locals() and session_data else "",
-                        "session_id": session_data.get("sessionId", "") if 'session_data' in locals() and session_data else "",
-                        "num_traces": session_data.get("numTraces", 0) if 'session_data' in locals() and session_data else 0,
-                        "token_usage": session_data.get("tokenUsage", {"total": 0.0}) if 'session_data' in locals() and session_data else {"total": 0.0},
-                        "cost_summary": session_data.get("costSummary", {}) if 'session_data' in locals() and session_data else {},
-                        "latency_p50": session_data.get("latencyP50", None) if 'session_data' in locals() and session_data else None,
+                        "id": (
+                            session_data.get("id", "")
+                            if "session_data" in locals() and session_data
+                            else ""
+                        ),
+                        "session_id": (
+                            session_data.get("sessionId", "")
+                            if "session_data" in locals() and session_data
+                            else ""
+                        ),
+                        "num_traces": (
+                            session_data.get("numTraces", 0)
+                            if "session_data" in locals() and session_data
+                            else 0
+                        ),
+                        "token_usage": (
+                            session_data.get("tokenUsage", {"total": 0.0})
+                            if "session_data" in locals() and session_data
+                            else {"total": 0.0}
+                        ),
+                        "cost_summary": (
+                            session_data.get("costSummary", {})
+                            if "session_data" in locals() and session_data
+                            else {}
+                        ),
+                        "latency_p50": (
+                            session_data.get("latencyP50", None)
+                            if "session_data" in locals() and session_data
+                            else None
+                        ),
                         "traces": [],  # Empty list instead of connection object
-                        "pagination": {"end_cursor": None, "has_next_page": False}
+                        "pagination": {"end_cursor": None, "has_next_page": False},
                     }
                 }
             }
             return fallback_response
 
-    async def get_agent_project_stats(self, agent_id: str, start_time: str) -> Dict[str, Any]:
+    async def get_agent_project_stats(
+        self, agent_id: str, start_time: str
+    ) -> Dict[str, Any]:
         """Get project statistics for an agent from observability service"""
         try:
             # Step 1: Get project ID from agent ID
             project_id = await self._get_project_id(agent_id)
-            
+
             if not project_id:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Project not found for agent '{agent_id}'"
+                    detail=f"Project not found for agent '{agent_id}'",
                 )
-            
+
             # Step 2: Execute the project stats GraphQL query
             query = """
             query ProjectPageQuery(
@@ -1118,41 +1203,32 @@ class ObservabilityService:
               id
             }
             """
-            
-            variables = {
-                "id": project_id,
-                "timeRange": {
-                    "start": start_time
-                }
-            }
-            
+
+            variables = {"id": project_id, "timeRange": {"start": start_time}}
+
             raw_response = await self._execute_graphql_query(query, variables)
-            
+
             # Step 3: Transform response to snake_case
             project_data = raw_response.get("data", {}).get("project", {})
-            
+
             if not project_data:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Project data not found for agent '{agent_id}'"
+                    detail=f"Project data not found for agent '{agent_id}'",
                 )
-            
+
             # Convert to snake_case format for client consumption
             converted_data = self._convert_keys_to_snake_case(project_data)
-            
-            return {
-                "data": {
-                    "project": converted_data
-                }
-            }
-            
+
+            return {"data": {"project": converted_data}}
+
         except HTTPException:
             raise
         except Exception as e:
             self.logger.error(f"Error getting agent project stats: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to retrieve project stats: {str(e)}"
+                detail=f"Failed to retrieve project stats: {str(e)}",
             )
 
     def _transform_span_response(self, raw_response: Dict[str, Any]) -> Dict[str, Any]:
@@ -1172,14 +1248,22 @@ class ObservabilityService:
 
             # Parse input/output values if they're JSON strings
             input_data = span_data.get("input", {})
-            if input_data and input_data.get("mimeType") == "json" and input_data.get("value"):
+            if (
+                input_data
+                and input_data.get("mimeType") == "json"
+                and input_data.get("value")
+            ):
                 try:
                     input_data["parsed_value"] = json.loads(input_data["value"])
                 except json.JSONDecodeError:
                     pass
 
             output_data = span_data.get("output", {})
-            if output_data and output_data.get("mimeType") == "json" and output_data.get("value"):
+            if (
+                output_data
+                and output_data.get("mimeType") == "json"
+                and output_data.get("value")
+            ):
                 try:
                     output_data["parsed_value"] = json.loads(output_data["value"])
                 except json.JSONDecodeError:
@@ -1188,12 +1272,10 @@ class ObservabilityService:
             # Convert entire span data to snake_case and return directly
             converted_span = self._convert_keys_to_snake_case(span_data)
 
-            return {
-                "data": {
-                    "span": converted_span
-                }
-            }
+            return {"data": {"span": converted_span}}
 
         except Exception as e:
-            self.logger.warning(f"Failed to transform span response: {str(e)}, returning raw response")
+            self.logger.warning(
+                f"Failed to transform span response: {str(e)}, returning raw response"
+            )
             return self._convert_keys_to_snake_case(raw_response)

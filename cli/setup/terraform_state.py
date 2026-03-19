@@ -61,7 +61,9 @@ def setup_working_directory(
     provider_source = tf_source / provider
 
     if not provider_source.exists():
-        console.print(f"[bold red]Terraform modules not found for provider '{provider}'[/]")
+        console.print(
+            f"[bold red]Terraform modules not found for provider '{provider}'[/]"
+        )
         console.print(f"[red]Expected location: {provider_source}[/]")
         console.print("\n[yellow]To fix this, either:[/]")
         console.print(f"  1. Copy Terraform modules to: {tf_source}")
@@ -75,7 +77,7 @@ def setup_working_directory(
     # Check if modules are already in working directory
     main_tf = work_dir / "main.tf"
     if not main_tf.exists():
-        console.print(f"[dim]Copying Terraform modules to working directory...[/]")
+        console.print("[dim]Copying Terraform modules to working directory...[/]")
         _copy_terraform_modules(provider_source, work_dir)
 
     # Generate backend configuration
@@ -105,7 +107,12 @@ def _copy_terraform_modules(source: Path, dest: Path):
 
         if item.is_file() and item.suffix in tf_extensions:
             shutil.copy2(item, dest_path)
-        elif item.is_file() and item.name in {"versions.tf", "providers.tf", "outputs.tf", "variables.tf"}:
+        elif item.is_file() and item.name in {
+            "versions.tf",
+            "providers.tf",
+            "outputs.tf",
+            "variables.tf",
+        }:
             shutil.copy2(item, dest_path)
 
 
@@ -128,7 +135,7 @@ def _generate_backend_config(work_dir: Path, provider: str, cluster_name: str):
     if backend_type == "local":
         # Local backend - state stored in working directory
         # No explicit backend config needed, terraform uses local by default
-        content = '''# Backend Configuration - Local State
+        content = """# Backend Configuration - Local State
 # State file: terraform.tfstate (in this directory)
 #
 # To migrate to remote state, set these environment variables:
@@ -144,7 +151,7 @@ terraform {
     # State is stored in terraform.tfstate in this directory
   }
 }
-'''
+"""
 
     elif backend_type == "s3":
         bucket = backend_config["bucket"]
@@ -152,7 +159,7 @@ terraform {
         key = f"{backend_config['key_prefix']}/{provider}/{cluster_name}/terraform.tfstate"
         dynamodb = backend_config.get("dynamodb_table")
 
-        content = f'''# Backend Configuration - AWS S3
+        content = f"""# Backend Configuration - AWS S3
 # State stored in: s3://{bucket}/{key}
 
 terraform {{
@@ -160,19 +167,19 @@ terraform {{
     bucket = "{bucket}"
     key    = "{key}"
     region = "{region}"
-'''
+"""
         if dynamodb:
             content += f'    dynamodb_table = "{dynamodb}"\n'
-        content += '''    encrypt = true
+        content += """    encrypt = true
   }
 }
-'''
+"""
 
     elif backend_type == "gcs":
         bucket = backend_config["bucket"]
         prefix = f"{backend_config['prefix']}/{provider}/{cluster_name}"
 
-        content = f'''# Backend Configuration - Google Cloud Storage
+        content = f"""# Backend Configuration - Google Cloud Storage
 # State stored in: gs://{bucket}/{prefix}/default.tfstate
 
 terraform {{
@@ -181,13 +188,13 @@ terraform {{
     prefix = "{prefix}"
   }}
 }}
-'''
+"""
 
     elif backend_type == "remote":
         org = backend_config["organization"]
         workspace = f"{backend_config['workspace_prefix']}{provider}-{cluster_name}"
 
-        content = f'''# Backend Configuration - Terraform Cloud
+        content = f"""# Backend Configuration - Terraform Cloud
 # Organization: {org}
 # Workspace: {workspace}
 
@@ -200,7 +207,7 @@ terraform {{
     }}
   }}
 }}
-'''
+"""
 
     else:
         # Fallback to local
@@ -209,7 +216,9 @@ terraform {{
     backend_file.write_text(content)
 
 
-def get_cluster_state_info(provider: str, cluster_name: str, state_dir: Optional[str] = None) -> dict:
+def get_cluster_state_info(
+    provider: str, cluster_name: str, state_dir: Optional[str] = None
+) -> dict:
     """
     Get information about the state of a specific cluster.
 
@@ -257,6 +266,7 @@ def list_managed_clusters(state_root: Optional[str] = None) -> list:
         root = Path(os.environ.get("NASIKO_STATE_DIR")).resolve()
     else:
         from .config import get_nasiko_home
+
         root = get_nasiko_home() / "state"
 
     clusters = []
@@ -275,21 +285,27 @@ def list_managed_clusters(state_root: Optional[str] = None) -> list:
             cluster_name = cluster_dir.name
 
             # Check if this looks like a terraform working directory
-            has_tf = (cluster_dir / "terraform.tfstate").exists() or \
-                     (cluster_dir / ".terraform").exists() or \
-                     (cluster_dir / "main.tf").exists()
+            has_tf = (
+                (cluster_dir / "terraform.tfstate").exists()
+                or (cluster_dir / ".terraform").exists()
+                or (cluster_dir / "main.tf").exists()
+            )
 
             if has_tf:
-                clusters.append({
-                    "provider": provider,
-                    "cluster_name": cluster_name,
-                    "work_dir": cluster_dir,
-                })
+                clusters.append(
+                    {
+                        "provider": provider,
+                        "cluster_name": cluster_name,
+                        "work_dir": cluster_dir,
+                    }
+                )
 
     return clusters
 
 
-def cleanup_cluster_state(provider: str, cluster_name: str, state_dir: Optional[str] = None):
+def cleanup_cluster_state(
+    provider: str, cluster_name: str, state_dir: Optional[str] = None
+):
     """
     Remove local state files for a cluster after destruction.
 

@@ -2,12 +2,15 @@ from typing import List, Optional, Any, Dict, Union
 from pydantic import BaseModel
 from app.entity.entity import RegistryBase
 
+
 # Registry API Types
 class RegistryCreateRequest(RegistryBase):
     pass
 
+
 class RegistryUpsertRequest(RegistryBase):
     pass
+
 
 class RegistryItemResponse(BaseModel):
     id: str  # Agent ID from AgentCard
@@ -64,6 +67,7 @@ class RegistrySingleResponse(BaseModel):
 class SuccessResponse(BaseModel):
     message: str
     success: bool = True
+
 
 class TraceData(BaseModel):
     name: str
@@ -170,7 +174,6 @@ class Token(BaseModel):
     token_type: str
 
 
-
 class GithubLoginResponse(BaseModel):
     user: GithubUser
     token: Token
@@ -256,16 +259,23 @@ class UploadStatusUpdateRequest(BaseModel):
     processing_duration: Optional[float] = None
     orchestration_duration: Optional[float] = None
 
+
 class AgentBuildRequest(BaseModel):
     agent_id: str  # The ID of the agent in the registry
     github_url: str
-    version_tag: str # e.g. "v1.0.0"
+    version_tag: str  # e.g. "v1.0.0"
+
 
 class AgentDeployRequest(BaseModel):
     agent_id: str
-    build_id: str # The specific build ID to deploy
-    port: int = 5000 # Port the agent listens on (changed from 8000 to match actual agent implementations)
-    env_vars: Optional[Dict[str, str]] = None # Optional environment variables for the agent
+    build_id: str  # The specific build ID to deploy
+    port: int = (
+        5000  # Port the agent listens on (changed from 8000 to match actual agent implementations)
+    )
+    env_vars: Optional[Dict[str, str]] = (
+        None  # Optional environment variables for the agent
+    )
+
 
 class AgentBuildStatusUpdateRequest(BaseModel):
     agent_id: str
@@ -276,6 +286,7 @@ class AgentBuildStatusUpdateRequest(BaseModel):
     logs: Optional[str] = None
     k8s_job_name: Optional[str] = None
     error_message: Optional[str] = None
+
 
 class AgentDeploymentStatusUpdateRequest(BaseModel):
     agent_id: str
@@ -412,11 +423,15 @@ class AgentVersionInfo(BaseModel):
     git_commit: Optional[str] = None
     rollback_info: Optional[Dict[str, Any]] = None
 
+
 class AgentUpdateRequest(BaseModel):
-    version: Optional[str] = "auto"  # "auto", "major", "minor", "patch", or specific version
+    version: Optional[str] = (
+        "auto"  # "auto", "major", "minor", "patch", or specific version
+    )
     update_strategy: str = "rolling"  # "rolling" or "blue-green"
     cleanup_old: bool = True
     description: Optional[str] = None  # Update description
+
 
 class AgentUpdateResponse(BaseModel):
     message: str
@@ -429,10 +444,12 @@ class AgentUpdateResponse(BaseModel):
     status: str  # "building", "deploying", "completed", "failed"
     status_code: int
 
+
 class AgentRollbackRequest(BaseModel):
     target_version: Optional[str] = None  # Defaults to previous version
     cleanup_failed: bool = True
     reason: Optional[str] = None
+
 
 class AgentRollbackResponse(BaseModel):
     message: str
@@ -442,6 +459,7 @@ class AgentRollbackResponse(BaseModel):
     status: str
     status_code: int
 
+
 class AgentVersionHistoryResponse(BaseModel):
     agent_id: str
     current_version: str
@@ -449,9 +467,11 @@ class AgentVersionHistoryResponse(BaseModel):
     status_code: int
     message: str
 
+
 class AgentRebuildRequest(BaseModel):
     reason: Optional[str] = None
     force: bool = False  # Force rebuild even if already building
+
 
 class AgentRebuildResponse(BaseModel):
     message: str
@@ -467,6 +487,7 @@ class VersionMappingRequest(BaseModel):
     agent_id: str
     semantic_version: str
 
+
 class VersionMappingResponse(BaseModel):
     agent_id: str
     semantic_version: str
@@ -475,8 +496,10 @@ class VersionMappingResponse(BaseModel):
     status_code: int
     message: str
 
+
 class VersionStatusUpdateRequest(BaseModel):
     status: str  # "building", "active", "failed", etc.
+
 
 class VersionStatusUpdateResponse(BaseModel):
     agent_name: str
@@ -590,7 +613,7 @@ class NANDAMessagesListRequest(BaseModel):
     limit: Optional[int] = 20
     offset: Optional[int] = None
     before: Optional[str] = None  # Message ID for pagination
-    after: Optional[str] = None   # Message ID for pagination
+    after: Optional[str] = None  # Message ID for pagination
     agent_id: Optional[str] = None  # Filter by specific agent
     conversation_id: Optional[str] = None  # Filter by conversation
     message_type: Optional[str] = None  # Filter by type (a2a_response, a2a_send)

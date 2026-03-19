@@ -9,16 +9,14 @@ discovery with Kubernetes API-based discovery.
 
 import asyncio
 import copy
-import json
 import logging
 import os
 import time
-from typing import Dict, List, Optional, Set
-from urllib.parse import urljoin
+from typing import List, Optional, Set
 
 import requests
 from fastapi import FastAPI, HTTPException
-from kubernetes import client, config, watch
+from kubernetes import client, config
 from pydantic import BaseModel
 from pythonjsonlogger import jsonlogger
 import docker
@@ -37,7 +35,13 @@ REGISTRY_INTERVAL = int(os.getenv("REGISTRY_INTERVAL", "30"))
 AGENTS_NAMESPACE = os.getenv("AGENTS_NAMESPACE", "nasiko-agents")
 PLATFORM_NAMESPACE = os.getenv("PLATFORM_NAMESPACE", "nasiko")
 AGENTS_NETWORK = os.getenv("AGENTS_NETWORK", "agents-net")
-K8S_ENABLED = os.getenv("K8S_ENABLED", "true").strip().lower() in {"1", "true", "yes", "y", "on"}
+K8S_ENABLED = os.getenv("K8S_ENABLED", "true").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "y",
+    "on",
+}
 
 if not K8S_ENABLED:
     logger.info("K8S_ENABLED=false; Using Docker container discovery")
@@ -46,9 +50,9 @@ else:
 
 # FastAPI app for health checks and status
 app = FastAPI(
-    title="Kong Service Registry", 
+    title="Kong Service Registry",
     version="1.0.0",
-    description="Automatic service discovery and registration for Kong API Gateway. Supports both Kubernetes and Docker container discovery."
+    description="Automatic service discovery and registration for Kong API Gateway. Supports both Kubernetes and Docker container discovery.",
 )
 
 # Global state
@@ -131,7 +135,7 @@ def get_service_port(svc):
 
     # Strategy 1: Look for named ports that indicate HTTP APIs
     for port in svc.spec.ports:
-        if port.name and port.name.lower() in ['http', 'api', 'web', 'rest']:
+        if port.name and port.name.lower() in ["http", "api", "web", "rest"]:
             return port.port
 
     # Fallback: Use first port
@@ -164,27 +168,30 @@ def get_k8s_services() -> List[ServiceInfo]:
 
                 # Skip kubernetes system services
                 if service_name in [
-                    'kubernetes',
-                    'kube-dns',
-                    'kube-proxy',
-                    'metrics-server',
-                    'coredns'
+                    "kubernetes",
+                    "kube-dns",
+                    "kube-proxy",
+                    "metrics-server",
+                    "coredns",
                 ]:
                     continue
 
                 # Skip services that are likely StatefulSets or databases
-                if any(pattern in service_name.lower() for pattern in [
-                    'headless',
-                    'postgres',
-                    'redis',
-                    'mongodb',
-                    'mysql',
-                    'elasticsearch',
-                    'kafka',
-                    'zookeeper',
-                    'cassandra',
-                    'etcd'
-                ]):
+                if any(
+                    pattern in service_name.lower()
+                    for pattern in [
+                        "headless",
+                        "postgres",
+                        "redis",
+                        "mongodb",
+                        "mysql",
+                        "elasticsearch",
+                        "kafka",
+                        "zookeeper",
+                        "cassandra",
+                        "etcd",
+                    ]
+                ):
                     continue
 
                 # Skip headless services (StatefulSets often use these)
@@ -206,11 +213,13 @@ def get_k8s_services() -> List[ServiceInfo]:
                     port=service_port,
                     path=f"/agents/{service_name}",
                     methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-                    namespace=AGENTS_NAMESPACE
+                    namespace=AGENTS_NAMESPACE,
                 )
 
                 services.append(service_info)
-                logger.info(f"Discovered agent service: {service_name} at {service_host}:{service_port}")
+                logger.info(
+                    f"Discovered agent service: {service_name} at {service_host}:{service_port}"
+                )
 
             except Exception as e:
                 logger.error(f"Error processing service {svc.metadata.name}: {e}")
@@ -229,7 +238,7 @@ def get_docker_services() -> List[ServiceInfo]:
     try:
         if K8S_ENABLED:  # Only discover Docker containers when K8S is disabled
             return services
-        
+
         docker_client = get_docker_client()
         if docker_client is None:
             return services
@@ -244,40 +253,42 @@ def get_docker_services() -> List[ServiceInfo]:
 
         # Get containers connected to this network
         containers = agents_network.containers
-        
+
         for container in containers:
             try:
                 # Refresh container info
                 container.reload()
-                
+
                 container_name = container.name
                 container_status = container.status
 
                 # Skip non-running containers
-                if container_status != 'running':
-                    logger.debug(f"Skipping non-running container: {container_name} (status: {container_status})")
+                if container_status != "running":
+                    logger.debug(
+                        f"Skipping non-running container: {container_name} (status: {container_status})"
+                    )
                     continue
 
                 # Skip Kong itself and other infrastructure containers
                 if container_name in [
-                    'kong-gateway',
-                    'kong-database', 
-                    'kong-migrations',
-                    'kong-service-registry',
-                    'nasiko-backend',
-                    'nasiko-web',
-                    'nasiko-router',
-                    'nasiko-auth-service',
-                    'nasiko-chat-history',
-                    'redis',
-                    'mongodb',
-                    'phoenix-observability'
+                    "kong-gateway",
+                    "kong-database",
+                    "kong-migrations",
+                    "kong-service-registry",
+                    "nasiko-backend",
+                    "nasiko-web",
+                    "nasiko-router",
+                    "nasiko-auth-service",
+                    "nasiko-chat-history",
+                    "redis",
+                    "mongodb",
+                    "phoenix-observability",
                 ]:
                     logger.debug(f"Skipping infrastructure container: {container_name}")
                     continue
 
                 # Only consider agent containers (those that start with 'agent-')
-                if not container_name.startswith('agent-'):
+                if not container_name.startswith("agent-"):
                     logger.debug(f"Skipping non-agent container: {container_name}")
                     continue
 
@@ -285,24 +296,26 @@ def get_docker_services() -> List[ServiceInfo]:
                 # We can communicate directly using container name and internal port
                 # Assume agents run on port 5000 internally (like in K8s)
                 service_port = 5000
-                
+
                 # Optional: Verify the container is actually listening on port 5000
                 # by checking container labels or image metadata, but for now assume it is
 
                 # Use container name as hostname for network communication
                 service_host = container_name
-                
+
                 service_info = ServiceInfo(
                     name=container_name,
                     host=service_host,
                     port=service_port,
                     path=f"/agents/{container_name}",
                     methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-                    namespace="docker-agents"  # Use a different namespace for Docker containers
+                    namespace="docker-agents",  # Use a different namespace for Docker containers
                 )
 
                 services.append(service_info)
-                logger.info(f"Discovered agent container: {container_name} at {service_host}:{service_port}")
+                logger.info(
+                    f"Discovered agent container: {container_name} at {service_host}:{service_port}"
+                )
 
             except Exception as e:
                 logger.error(f"Error processing container {container.name}: {e}")
@@ -327,7 +340,7 @@ def register_service_in_kong(service: ServiceInfo) -> bool:
             "write_timeout": 300000,
             "read_timeout": 300000,
             "retries": 3,
-            "protocol": "http"
+            "protocol": "http",
         }
 
         # Check if service exists
@@ -338,23 +351,19 @@ def register_service_in_kong(service: ServiceInfo) -> bool:
                 response = requests.patch(
                     f"{KONG_ADMIN_URL}/services/{service.name}",
                     json=service_data,
-                    timeout=10
+                    timeout=10,
                 )
                 logger.info(f"Updated existing service: {service.name}")
             else:
                 # Create new service
                 response = requests.post(
-                    f"{KONG_ADMIN_URL}/services",
-                    json=service_data,
-                    timeout=10
+                    f"{KONG_ADMIN_URL}/services", json=service_data, timeout=10
                 )
                 logger.info(f"Created new service: {service.name}")
         except requests.exceptions.RequestException:
             # Create new service
             response = requests.post(
-                f"{KONG_ADMIN_URL}/services",
-                json=service_data,
-                timeout=10
+                f"{KONG_ADMIN_URL}/services", json=service_data, timeout=10
             )
             logger.info(f"Created new service: {service.name}")
 
@@ -368,7 +377,7 @@ def register_service_in_kong(service: ServiceInfo) -> bool:
             "paths": [service.path],
             "methods": service.methods,
             "strip_path": True,
-            "preserve_host": False
+            "preserve_host": False,
         }
 
         # Check if route exists
@@ -379,7 +388,7 @@ def register_service_in_kong(service: ServiceInfo) -> bool:
                 response = requests.patch(
                     f"{KONG_ADMIN_URL}/routes/{service.name}-route",
                     json=route_data,
-                    timeout=10
+                    timeout=10,
                 )
                 logger.info(f"Updated existing route: {service.name}-route")
             else:
@@ -388,7 +397,7 @@ def register_service_in_kong(service: ServiceInfo) -> bool:
                 response = requests.post(
                     f"{KONG_ADMIN_URL}/services/{service.name}/routes",
                     json=route_data,
-                    timeout=10
+                    timeout=10,
                 )
                 logger.info(f"Created new route: {service.name}-route")
         except requests.exceptions.RequestException:
@@ -397,12 +406,14 @@ def register_service_in_kong(service: ServiceInfo) -> bool:
             response = requests.post(
                 f"{KONG_ADMIN_URL}/services/{service.name}/routes",
                 json=route_data,
-                timeout=10
+                timeout=10,
             )
             logger.info(f"Created new route: {service.name}-route")
 
         if response.status_code not in [200, 201]:
-            logger.error(f"Failed to register route for {service.name}: {response.text}")
+            logger.error(
+                f"Failed to register route for {service.name}: {response.text}"
+            )
             return False
 
         logger.info(f"Successfully registered {service.name} in Kong")
@@ -412,7 +423,9 @@ def register_service_in_kong(service: ServiceInfo) -> bool:
         # 1. Agent-level changes (root_path in FastAPI)
         # 2. Custom docs proxy service
         # 3. Use direct agent ports for docs access
-        logger.info(f"For Swagger docs access: Use direct agent port or configure agent root_path")
+        logger.info(
+            "For Swagger docs access: Use direct agent port or configure agent root_path"
+        )
 
         return True
 
@@ -430,25 +443,25 @@ def cleanup_stale_services(current_service_names: Set[str]) -> None:
             logger.error(f"Failed to get services from Kong: {response.text}")
             return
 
-        kong_services = response.json().get('data', [])
+        kong_services = response.json().get("data", [])
 
         # Static proxy services that should never be cleaned up
         static_proxy_services = {
-            'backend-api-proxy',
-            'web-app-proxy',
-            'auth-proxy',
-            'nasiko-router',
-            'landing-page',
-            'n8n',
-            'gateway-status',
-            'gateway-health',
+            "backend-api-proxy",
+            "web-app-proxy",
+            "auth-proxy",
+            "nasiko-router",
+            "landing-page",
+            "n8n",
+            "gateway-status",
+            "gateway-health",
         }
 
         for kong_service in kong_services:
-            service_name = kong_service['name']
+            service_name = kong_service["name"]
 
             # Skip Kong's internal services
-            if service_name in ['kong', 'postgres', 'konga', 'registry']:
+            if service_name in ["kong", "postgres", "konga", "registry"]:
                 continue
 
             # Skip static proxy services - they're not k8s services but should be preserved
@@ -459,16 +472,24 @@ def cleanup_stale_services(current_service_names: Set[str]) -> None:
             if service_name not in current_service_names:
                 try:
                     # Delete routes first
-                    routes_response = requests.get(f"{KONG_ADMIN_URL}/services/{service_name}/routes")
+                    routes_response = requests.get(
+                        f"{KONG_ADMIN_URL}/services/{service_name}/routes"
+                    )
                     if routes_response.status_code == 200:
-                        routes = routes_response.json().get('data', [])
+                        routes = routes_response.json().get("data", [])
                         for route in routes:
-                            delete_response = requests.delete(f"{KONG_ADMIN_URL}/routes/{route['id']}")
+                            delete_response = requests.delete(
+                                f"{KONG_ADMIN_URL}/routes/{route['id']}"
+                            )
                             if delete_response.status_code == 204:
-                                logger.info(f"Deleted route {route['name']} for service {service_name}")
+                                logger.info(
+                                    f"Deleted route {route['name']} for service {service_name}"
+                                )
 
                     # Delete service
-                    delete_response = requests.delete(f"{KONG_ADMIN_URL}/services/{service_name}")
+                    delete_response = requests.delete(
+                        f"{KONG_ADMIN_URL}/services/{service_name}"
+                    )
                     if delete_response.status_code == 204:
                         logger.info(f"Removed stale service: {service_name}")
 
@@ -537,7 +558,7 @@ def register_static_proxies():
             "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
             "strip_path": False,  # /api/v1/users → /api/v1/users
             "preserve_host": False,
-            "middlewares": ["cors", "nasiko-auth"]  # CORS + Auth, no chat logging
+            "middlewares": ["cors", "nasiko-auth"],  # CORS + Auth, no chat logging
         },
         # Web app proxy - no middleware
         {
@@ -548,7 +569,7 @@ def register_static_proxies():
             "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
             "strip_path": True,
             "preserve_host": False,
-            "middlewares": ["cors"]  # CORS only
+            "middlewares": ["cors"],  # CORS only
         },
         # Auth service proxy - auth only
         {
@@ -561,7 +582,7 @@ def register_static_proxies():
             "preserve_host": False,
             # Auth endpoints (login, token exchange, GitHub OAuth callbacks) must be reachable
             # without already having an Authorization header.
-            "middlewares": ["cors"]
+            "middlewares": ["cors"],
         },
         # Chat service proxy (sidecar) - no middleware. -- we don't need
         # {
@@ -584,7 +605,11 @@ def register_static_proxies():
             "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
             "strip_path": False,  # Keep /router in path when forwarding
             "preserve_host": False,
-            "middlewares": ["cors", "nasiko-auth", "chat-logger"]  # Full middleware with CORS
+            "middlewares": [
+                "cors",
+                "nasiko-auth",
+                "chat-logger",
+            ],  # Full middleware with CORS
         },
         # Static landing page - forward to web app
         {
@@ -596,7 +621,7 @@ def register_static_proxies():
             "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
             "strip_path": False,
             "preserve_host": True,
-            "middlewares": ["cors"]  # CORS only
+            "middlewares": ["cors"],  # CORS only
         },
         # Gateway status passthrough for local proxy health checks
         {
@@ -607,7 +632,7 @@ def register_static_proxies():
             "methods": ["GET", "OPTIONS"],
             "strip_path": False,
             "preserve_host": False,
-            "middlewares": ["cors"]
+            "middlewares": ["cors"],
         },
         # Gateway health passthrough for local proxy health checks
         {
@@ -618,7 +643,7 @@ def register_static_proxies():
             "methods": ["GET", "OPTIONS"],
             "strip_path": False,
             "preserve_host": False,
-            "middlewares": ["cors"]
+            "middlewares": ["cors"],
         },
         # N8N workflow automation service
         {
@@ -629,15 +654,19 @@ def register_static_proxies():
             "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
             "strip_path": True,
             "preserve_host": False,
-            "middlewares": ["cors"]  # CORS only, no auth for now (n8n has its own auth)
-        }
+            "middlewares": [
+                "cors"
+            ],  # CORS only, no auth for now (n8n has its own auth)
+        },
     ]
 
     for service_config in static_services:
         try:
             register_proxy_service_in_kong(service_config)
         except Exception as e:
-            logger.error(f"Error registering static proxy {service_config['name']}: {e}")
+            logger.error(
+                f"Error registering static proxy {service_config['name']}: {e}"
+            )
 
 
 def register_proxy_service_in_kong(service_config):
@@ -661,7 +690,7 @@ def register_proxy_service_in_kong(service_config):
             "write_timeout": 300000,
             "read_timeout": 300000,
             "retries": 3,
-            "protocol": "http"
+            "protocol": "http",
         }
 
         logger.info(f"Service data for {service_config['name']}: {service_data}")
@@ -669,8 +698,12 @@ def register_proxy_service_in_kong(service_config):
         # Check if service exists
         try:
             logger.info(f"Checking if service {service_config['name']} exists...")
-            response = requests.get(f"{KONG_ADMIN_URL}/services/{service_config['name']}")
-            logger.info(f"Service check response for {service_config['name']}: {response.status_code}")
+            response = requests.get(
+                f"{KONG_ADMIN_URL}/services/{service_config['name']}"
+            )
+            logger.info(
+                f"Service check response for {service_config['name']}: {response.status_code}"
+            )
 
             if response.status_code == 200:
                 # Update existing service
@@ -678,34 +711,42 @@ def register_proxy_service_in_kong(service_config):
                 response = requests.patch(
                     f"{KONG_ADMIN_URL}/services/{service_config['name']}",
                     json=service_data,
-                    timeout=10
+                    timeout=10,
                 )
-                logger.info(f"Update response for {service_config['name']}: {response.status_code} - {response.text[:200]}")
+                logger.info(
+                    f"Update response for {service_config['name']}: {response.status_code} - {response.text[:200]}"
+                )
                 logger.info(f"Updated existing proxy service: {service_config['name']}")
             else:
                 # Create new service
                 logger.info(f"Creating new service {service_config['name']}...")
                 response = requests.post(
-                    f"{KONG_ADMIN_URL}/services",
-                    json=service_data,
-                    timeout=10
+                    f"{KONG_ADMIN_URL}/services", json=service_data, timeout=10
                 )
-                logger.info(f"Create response for {service_config['name']}: {response.status_code} - {response.text[:200]}")
+                logger.info(
+                    f"Create response for {service_config['name']}: {response.status_code} - {response.text[:200]}"
+                )
                 logger.info(f"Created new proxy service: {service_config['name']}")
         except requests.exceptions.RequestException as e:
             # Create new service
-            logger.warning(f"Request exception checking service {service_config['name']}: {e}")
-            logger.info(f"Creating new service {service_config['name']} due to exception...")
-            response = requests.post(
-                f"{KONG_ADMIN_URL}/services",
-                json=service_data,
-                timeout=10
+            logger.warning(
+                f"Request exception checking service {service_config['name']}: {e}"
             )
-            logger.info(f"Exception create response for {service_config['name']}: {response.status_code} - {response.text[:200]}")
+            logger.info(
+                f"Creating new service {service_config['name']} due to exception..."
+            )
+            response = requests.post(
+                f"{KONG_ADMIN_URL}/services", json=service_data, timeout=10
+            )
+            logger.info(
+                f"Exception create response for {service_config['name']}: {response.status_code} - {response.text[:200]}"
+            )
             logger.info(f"Created new proxy service: {service_config['name']}")
 
         if response.status_code not in [200, 201]:
-            logger.error(f"Failed to register proxy service {service_config['name']}: HTTP {response.status_code} - {response.text}")
+            logger.error(
+                f"Failed to register proxy service {service_config['name']}: HTTP {response.status_code} - {response.text}"
+            )
             return False
 
         # Create route for the service
@@ -714,7 +755,7 @@ def register_proxy_service_in_kong(service_config):
             "paths": service_config["paths"],
             "methods": service_config["methods"],
             "strip_path": service_config.get("strip_path", False),
-            "preserve_host": service_config.get("preserve_host", False)
+            "preserve_host": service_config.get("preserve_host", False),
         }
 
         logger.info(f"Route data for {service_config['name']}: {route_data}")
@@ -722,19 +763,29 @@ def register_proxy_service_in_kong(service_config):
         # Check if route exists
         try:
             logger.info(f"Checking if route {service_config['name']}-route exists...")
-            response = requests.get(f"{KONG_ADMIN_URL}/routes/{service_config['name']}-route")
-            logger.info(f"Route check response for {service_config['name']}: {response.status_code}")
+            response = requests.get(
+                f"{KONG_ADMIN_URL}/routes/{service_config['name']}-route"
+            )
+            logger.info(
+                f"Route check response for {service_config['name']}: {response.status_code}"
+            )
 
             if response.status_code == 200:
                 # Update existing route
-                logger.info(f"Updating existing route {service_config['name']}-route...")
+                logger.info(
+                    f"Updating existing route {service_config['name']}-route..."
+                )
                 response = requests.patch(
                     f"{KONG_ADMIN_URL}/routes/{service_config['name']}-route",
                     json=route_data,
-                    timeout=10
+                    timeout=10,
                 )
-                logger.info(f"Route update response for {service_config['name']}: {response.status_code} - {response.text[:200]}")
-                logger.info(f"Updated existing proxy route: {service_config['name']}-route")
+                logger.info(
+                    f"Route update response for {service_config['name']}: {response.status_code} - {response.text[:200]}"
+                )
+                logger.info(
+                    f"Updated existing proxy route: {service_config['name']}-route"
+                )
             else:
                 # Create new route
                 logger.info(f"Creating new route {service_config['name']}-route...")
@@ -742,25 +793,35 @@ def register_proxy_service_in_kong(service_config):
                 response = requests.post(
                     f"{KONG_ADMIN_URL}/services/{service_config['name']}/routes",
                     json=route_data,
-                    timeout=10
+                    timeout=10,
                 )
-                logger.info(f"Route create response for {service_config['name']}: {response.status_code} - {response.text[:200]}")
+                logger.info(
+                    f"Route create response for {service_config['name']}: {response.status_code} - {response.text[:200]}"
+                )
                 logger.info(f"Created new proxy route: {service_config['name']}-route")
         except requests.exceptions.RequestException as e:
             # Create new route
-            logger.warning(f"Request exception checking route {service_config['name']}: {e}")
-            logger.info(f"Creating new route {service_config['name']}-route due to exception...")
+            logger.warning(
+                f"Request exception checking route {service_config['name']}: {e}"
+            )
+            logger.info(
+                f"Creating new route {service_config['name']}-route due to exception..."
+            )
             route_data["service"] = {"name": service_config["name"]}
             response = requests.post(
                 f"{KONG_ADMIN_URL}/services/{service_config['name']}/routes",
                 json=route_data,
-                timeout=10
+                timeout=10,
             )
-            logger.info(f"Route exception create response for {service_config['name']}: {response.status_code} - {response.text[:200]}")
+            logger.info(
+                f"Route exception create response for {service_config['name']}: {response.status_code} - {response.text[:200]}"
+            )
             logger.info(f"Created new proxy route: {service_config['name']}-route")
 
         if response.status_code not in [200, 201]:
-            logger.error(f"Failed to register proxy route for {service_config['name']}: HTTP {response.status_code} - {response.text}")
+            logger.error(
+                f"Failed to register proxy route for {service_config['name']}: HTTP {response.status_code} - {response.text}"
+            )
             return False
 
         # Apply middlewares in array order
@@ -769,21 +830,35 @@ def register_proxy_service_in_kong(service_config):
             route_name = f"{service_config['name']}-route"
             apply_middlewares_to_route(route_name, middlewares)
         else:
-            logger.info(f"No middlewares configured for route: {service_config['name']}-route")
+            logger.info(
+                f"No middlewares configured for route: {service_config['name']}-route"
+            )
 
         # Verify the service and route were actually created
         logger.info(f"Verifying registration of {service_config['name']}...")
         try:
-            service_check = requests.get(f"{KONG_ADMIN_URL}/services/{service_config['name']}")
-            route_check = requests.get(f"{KONG_ADMIN_URL}/routes/{service_config['name']}-route")
+            service_check = requests.get(
+                f"{KONG_ADMIN_URL}/services/{service_config['name']}"
+            )
+            route_check = requests.get(
+                f"{KONG_ADMIN_URL}/routes/{service_config['name']}-route"
+            )
 
-            logger.info(f"Post-registration verification - Service {service_config['name']}: {service_check.status_code}")
-            logger.info(f"Post-registration verification - Route {service_config['name']}-route: {route_check.status_code}")
+            logger.info(
+                f"Post-registration verification - Service {service_config['name']}: {service_check.status_code}"
+            )
+            logger.info(
+                f"Post-registration verification - Route {service_config['name']}-route: {route_check.status_code}"
+            )
 
             if service_check.status_code == 200 and route_check.status_code == 200:
-                logger.info(f"Successfully registered and verified proxy {service_config['name']} in Kong")
+                logger.info(
+                    f"Successfully registered and verified proxy {service_config['name']} in Kong"
+                )
             else:
-                logger.error(f"Registration verification failed for {service_config['name']} - Service: {service_check.status_code}, Route: {route_check.status_code}")
+                logger.error(
+                    f"Registration verification failed for {service_config['name']} - Service: {service_check.status_code}, Route: {route_check.status_code}"
+                )
                 return False
         except Exception as e:
             logger.error(f"Error during verification of {service_config['name']}: {e}")
@@ -792,7 +867,9 @@ def register_proxy_service_in_kong(service_config):
         return True
 
     except Exception as e:
-        logger.error(f"Error registering proxy service {service_config['name']} in Kong: {e}")
+        logger.error(
+            f"Error registering proxy service {service_config['name']} in Kong: {e}"
+        )
         return False
 
 
@@ -817,29 +894,45 @@ def apply_middlewares_to_route(route_name, middlewares):
     plugin_configs = {
         "nasiko-auth": {
             "name": "nasiko-auth",
-            "config": {
-                "auth_service_url": auth_service_url,
-                "timeout": 5000
-            }
+            "config": {"auth_service_url": auth_service_url, "timeout": 5000},
         },
         "chat-logger": {
             "name": "chat-logger",
             "config": {
-                "chat_service_url": "http://localhost:8002" if K8S_ENABLED else "http://nasiko-chat-history:8002",
-                "timeout": 5000
-            }
+                "chat_service_url": (
+                    "http://localhost:8002"
+                    if K8S_ENABLED
+                    else "http://nasiko-chat-history:8002"
+                ),
+                "timeout": 5000,
+            },
         },
         "cors": {
             "name": "cors",
             "config": {
                 "origins": ["*"],
                 "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-                "headers": ["Accept", "Accept-Version", "Content-Length", "Content-MD5", "Content-Type", "Date", "Authorization", "X-Auth-Token", "X-Requested-With"],
-                "exposed_headers": ["X-Subject-ID", "X-Subject-Type", "X-Is-Super-User", "X-Permissions"],
+                "headers": [
+                    "Accept",
+                    "Accept-Version",
+                    "Content-Length",
+                    "Content-MD5",
+                    "Content-Type",
+                    "Date",
+                    "Authorization",
+                    "X-Auth-Token",
+                    "X-Requested-With",
+                ],
+                "exposed_headers": [
+                    "X-Subject-ID",
+                    "X-Subject-Type",
+                    "X-Is-Super-User",
+                    "X-Permissions",
+                ],
                 "credentials": True,
                 "max_age": 3600,
-                "preflight_continue": False
-            }
+                "preflight_continue": False,
+            },
         },
         "static-landing": {
             "name": "request-termination",
@@ -856,9 +949,9 @@ def apply_middlewares_to_route(route_name, middlewares):
     <p>Redirecting to <a href="/app">/app</a>...</p>
     <script>window.location.href = "/app"</script>
 </body>
-</html>"""
-            }
-        }
+</html>""",
+            },
+        },
     }
 
     for middleware in middlewares:
@@ -872,21 +965,25 @@ def apply_middlewares_to_route(route_name, middlewares):
 
             # Always create new plugin (avoid update issues)
             response = requests.post(
-                f"{KONG_ADMIN_URL}/plugins",
-                json=plugin_config,
-                timeout=10
+                f"{KONG_ADMIN_URL}/plugins", json=plugin_config, timeout=10
             )
 
             if response.status_code in [200, 201]:
                 logger.info(f"Applied {middleware} plugin to route {route_name}")
             elif response.status_code == 409:
                 # Plugin already exists - this is expected, not an error
-                logger.info(f"{middleware} plugin already exists for route {route_name}")
+                logger.info(
+                    f"{middleware} plugin already exists for route {route_name}"
+                )
             else:
-                logger.error(f"Failed to apply {middleware} to route {route_name}: {response.text}")
+                logger.error(
+                    f"Failed to apply {middleware} to route {route_name}: {response.text}"
+                )
 
         except Exception as e:
-            logger.error(f"Error applying middleware {middleware} to route {route_name}: {e}")
+            logger.error(
+                f"Error applying middleware {middleware} to route {route_name}: {e}"
+            )
 
 
 async def sync_services():
@@ -894,7 +991,7 @@ async def sync_services():
     global current_services
 
     logger.info("Starting service synchronization")
-    
+
     # Configure plugins on first run
     plugin_configured = False
 
@@ -932,7 +1029,9 @@ async def sync_services():
 
                     # Apply full middleware to dynamic agent routes
                     route_name = f"{service.name}-route"
-                    apply_middlewares_to_route(route_name, ["cors", "nasiko-auth", "chat-logger"])
+                    apply_middlewares_to_route(
+                        route_name, ["cors", "nasiko-auth", "chat-logger"]
+                    )
 
             # Clean up stale services
             cleanup_stale_services(successful_registrations)
@@ -970,7 +1069,7 @@ async def get_status() -> RegistryStatus:
         status="healthy" if kong_healthy else "degraded",
         services_count=len(current_services),
         last_sync=time.strftime("%Y-%m-%d %H:%M:%S"),
-        kong_status="healthy" if kong_healthy else "unhealthy"
+        kong_status="healthy" if kong_healthy else "unhealthy",
     )
 
 
@@ -991,13 +1090,15 @@ async def trigger_sync():
         else:
             services = get_docker_services()
             discovery_type = "Docker"
-            
+
         registered = 0
         for service in services:
             if register_service_in_kong(service):
                 registered += 1
 
-        return {"message": f"Sync completed. Registered {registered} {discovery_type} services."}
+        return {
+            "message": f"Sync completed. Registered {registered} {discovery_type} services."
+        }
 
     except Exception as e:
         logger.error(f"Manual sync failed: {e}")
@@ -1008,9 +1109,4 @@ if __name__ == "__main__":
     import uvicorn
 
     logger.info("Starting Kong Service Registry")
-    uvicorn.run(
-        app,
-        host="0.0.0.0",
-        port=8080,
-        log_level="info"
-    )
+    uvicorn.run(app, host="0.0.0.0", port=8080, log_level="info")

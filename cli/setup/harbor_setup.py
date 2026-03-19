@@ -20,9 +20,9 @@ CHARTS = {
         "values": {
             "controller": {
                 "service": {"type": "LoadBalancer"},
-                "allowSnippetAnnotations": "true"
+                "allowSnippetAnnotations": "true",
             }
-        }
+        },
     },
     "cert-manager": {
         "repo_name": "jetstack",
@@ -30,9 +30,7 @@ CHARTS = {
         "chart": "jetstack/cert-manager",
         "namespace": "cert-manager",
         "version": "v1.14.4",
-        "values": {
-            "installCRDs": "true"
-        }
+        "values": {"installCRDs": "true"},
     },
     "harbor": {
         "repo_name": "harbor",
@@ -40,30 +38,27 @@ CHARTS = {
         "chart": "harbor/harbor",
         "namespace": "harbor",
         "version": "1.14.0",
-        "values": {} 
-    }
+        "values": {},
+    },
 }
+
 
 def run_helm(args: list[str], description: str):
     from .utils import ensure_helm
+
     ensure_helm()
     """Wrapper to run helm commands with a spinner."""
     cmd = ["helm"] + args
-    
+
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
-        console=console
+        console=console,
     ) as progress:
         task = progress.add_task(description, total=None)
-        
+
         try:
-            result = subprocess.run(
-                cmd, 
-                check=True, 
-                capture_output=True, 
-                text=True
-            )
+            result = subprocess.run(cmd, check=True, capture_output=True, text=True)
             progress.update(task, description=f"[green]✅ {description} - Done[/]")
             return result.stdout
         except subprocess.CalledProcessError as e:
@@ -71,40 +66,48 @@ def run_helm(args: list[str], description: str):
             console.print(f"[bold red]Error Output:[/]\n{e.stderr}")
             sys.exit(1)
 
+
 def add_repos():
     """Adds necessary Helm repositories."""
     console.rule("[bold cyan]1. Configuring Helm Repos[/]")
     for name, chart_config in CHARTS.items():
         run_helm(
             ["repo", "add", chart_config["repo_name"], chart_config["repo_url"]],
-            f"Adding repo: {name}"
+            f"Adding repo: {name}",
         )
     run_helm(["repo", "update"], "Updating Helm repositories")
+
 
 def deploy_chart(name: str, release_name: str, values: dict):
     """Deploys or upgrades a Helm chart."""
     config = CHARTS[name]
-    
+
     # Merge default values with dynamic values
     final_values = config["values"].copy()
     final_values.update(values)
-    
+
     # Construct --set arguments flattened
     set_args = []
     for key, val in flatten_dict(final_values).items():
         set_args.extend(["--set", f"{key}={val}"])
 
     cmd = [
-        "upgrade", "--install", release_name, config["chart"],
-        "--namespace", config["namespace"],
+        "upgrade",
+        "--install",
+        release_name,
+        config["chart"],
+        "--namespace",
+        config["namespace"],
         "--create-namespace",
-        "--version", config["version"],
-        "--wait"  # Wait for pods to be ready
+        "--version",
+        config["version"],
+        "--wait",  # Wait for pods to be ready
     ] + set_args
 
     run_helm(cmd, f"Deploying {name} ({config['version']})")
 
-def flatten_dict(d, parent_key='', sep='.'):
+
+def flatten_dict(d, parent_key="", sep="."):
     """Flattens a nested dictionary for Helm --set notation."""
     items = []
     for k, v in d.items():
@@ -115,6 +118,7 @@ def flatten_dict(d, parent_key='', sep='.'):
         else:
             items.append((new_key, v))
     return dict(items)
+
 
 def get_ingress_ip():
     """Polls the Ingress Controller Service for the External IP/Hostname."""
@@ -139,8 +143,9 @@ def get_ingress_ip():
             except Exception:
                 pass
             time.sleep(2)
-    
+
     return "[red]Pending (Run 'kubectl get svc -n ingress-nginx')[/]"
+
 
 def create_cluster_issuer(email: str):
     """Applies the ClusterIssuer YAML using kubectl (via subprocess)."""
@@ -161,28 +166,33 @@ spec:
           class: nginx
 """
     run_process = subprocess.Popen(
-        ["kubectl", "apply", "-f", "-"], 
-        stdin=subprocess.PIPE, 
-        stdout=subprocess.PIPE, 
+        ["kubectl", "apply", "-f", "-"],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        text=True
+        text=True,
     )
     stdout, stderr = run_process.communicate(input=manifest)
-    
+
     if run_process.returncode != 0:
         console.print(f"[red]Failed to create ClusterIssuer:[/]\n{stderr}")
     else:
         console.print("[green]✅ ClusterIssuer created[/]")
 
+
 @app.command()
 def deploy(
-    domain: str = typer.Option(None, help="Domain Name (e.g., reg.example.com) - optional for local setups"),
-    email: str = typer.Option(None, help="Email for Let's Encrypt - required only when domain is provided"),
+    domain: str = typer.Option(
+        None, help="Domain Name (e.g., reg.example.com) - optional for local setups"
+    ),
+    email: str = typer.Option(
+        None, help="Email for Let's Encrypt - required only when domain is provided"
+    ),
     password: str = typer.Option(..., help="Harbor Admin Password"),
-    username: str = typer.Option("admin", help="Harbor Admin Username")
+    username: str = typer.Option("admin", help="Harbor Admin Username"),
 ):
     """Deploys the full stack using Helm."""
-    
+
     # 1. Add Repos
     add_repos()
 
@@ -195,42 +205,35 @@ def deploy(
 
     # 4. Deploy Harbor
     console.rule("[bold cyan]3. Deploying Harbor[/]")
-    
+
     # Base Harbor values with configurable admin credentials
     base_harbor_values = {
         "harborAdminPassword": password,
         # Configure registry to use the same admin credentials
-        "registry": {
-            "credentials": {
-                "username": username,
-                "password": password
-            }
-        }
+        "registry": {"credentials": {"username": username, "password": password}},
     }
-    
+
     if domain:
         # External access with Ingress and TLS
         harbor_values = {
             **base_harbor_values,
             "expose": {
-                "type": "ingress", 
+                "type": "ingress",
                 "tls": {
                     "enabled": "true",
                     "certSource": "secret",
-                    "secret": {
-                        "secretName": "harbor-tls"
-                    }
+                    "secret": {"secretName": "harbor-tls"},
                 },
                 "ingress": {
                     "hosts": {"core": domain},
                     "annotations": {
                         "cert-manager.io/cluster-issuer": "letsencrypt-prod",
                         "kubernetes.io/ingress.class": "nginx",
-                        "nginx.ingress.kubernetes.io/ssl-redirect": '"true"'
-                    }
-                }
+                        "nginx.ingress.kubernetes.io/ssl-redirect": '"true"',
+                    },
+                },
             },
-            "externalURL": f"https://{domain}"
+            "externalURL": f"https://{domain}",
         }
     else:
         # Local cluster access - use NodePort for Docker Desktop compatibility
@@ -238,23 +241,18 @@ def deploy(
             **base_harbor_values,
             "expose": {
                 "type": "nodePort",
-                "tls": {
-                    "enabled": "false"
-                },
+                "tls": {"enabled": "false"},
                 "nodePort": {
                     "ports": {
                         "http": {"port": 80, "nodePort": 30002},
-                        "https": {"port": 443, "nodePort": 30003}  
+                        "https": {"port": 443, "nodePort": 30003},
                     }
-                }
+                },
             },
-            "registry": {
-                **base_harbor_values.get("registry", {}),
-                "nodePort": 30500
-            },
-            "externalURL": "http://localhost:30002"
+            "registry": {**base_harbor_values.get("registry", {}), "nodePort": 30500},
+            "externalURL": "http://localhost:30002",
         }
-    
+
     deploy_chart("harbor", "harbor", harbor_values)
 
     # For local setups, create NodePort service for registry access
@@ -262,22 +260,47 @@ def deploy(
         console.print("[yellow]⏳ Creating NodePort service for Harbor registry...[/]")
         try:
             # Create NodePort service for Harbor registry on port 30500
-            subprocess.run([
-                "kubectl", "expose", "service", "harbor-registry", 
-                "--type=NodePort", "--name=harbor-registry-nodeport", 
-                "--port=5000", "--target-port=5000", "-n", "harbor"
-            ], capture_output=True, check=True)
-            
+            subprocess.run(
+                [
+                    "kubectl",
+                    "expose",
+                    "service",
+                    "harbor-registry",
+                    "--type=NodePort",
+                    "--name=harbor-registry-nodeport",
+                    "--port=5000",
+                    "--target-port=5000",
+                    "-n",
+                    "harbor",
+                ],
+                capture_output=True,
+                check=True,
+            )
+
             # Patch to set specific nodePort
-            subprocess.run([
-                "kubectl", "patch", "svc", "harbor-registry-nodeport", "-n", "harbor",
-                "-p", '{"spec":{"ports":[{"port":5000,"nodePort":30500,"targetPort":5000}]}}'
-            ], capture_output=True, check=True)
-            
-            console.print("[green]✅ Harbor registry NodePort service created on port 30500[/]")
+            subprocess.run(
+                [
+                    "kubectl",
+                    "patch",
+                    "svc",
+                    "harbor-registry-nodeport",
+                    "-n",
+                    "harbor",
+                    "-p",
+                    '{"spec":{"ports":[{"port":5000,"nodePort":30500,"targetPort":5000}]}}',
+                ],
+                capture_output=True,
+                check=True,
+            )
+
+            console.print(
+                "[green]✅ Harbor registry NodePort service created on port 30500[/]"
+            )
         except subprocess.CalledProcessError as e:
             console.print(f"[yellow]⚠️  Could not create NodePort service: {e}[/]")
-            console.print("[yellow]   You may need to create it manually for agent deployments[/]")
+            console.print(
+                "[yellow]   You may need to create it manually for agent deployments[/]"
+            )
 
     if domain:
         # 5. Create ClusterIssuer (only for external access)
@@ -303,6 +326,7 @@ def deploy(
         • Password: {password}
         • Access via NodePort from host machine
         """)
+
 
 if __name__ == "__main__":
     app()

@@ -85,7 +85,7 @@ class APIEndpoints:
     USER_REINSTATE = "/auth/users/{user_id}/reinstate"
     USER_REVOKE_TOKENS = "/auth/tokens/revoke-user/{user_id}"
     EMERGENCY_REVOKE_ALL = "/auth/emergency/revoke-all"
-    
+
     # User Upload Agents endpoint
     USER_UPLOAD_AGENTS = "/user/upload-agents"
 
