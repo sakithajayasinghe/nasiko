@@ -9,7 +9,6 @@ from pydantic import BaseModel
 from bs4 import BeautifulSoup
 from langdetect import detect, DetectorFactory
 
-
 # Set seed for consistent language detection
 DetectorFactory.seed = 0
 

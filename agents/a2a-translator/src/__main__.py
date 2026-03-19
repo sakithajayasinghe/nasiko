@@ -19,7 +19,6 @@ from openai_agent_executor import (
 )
 from starlette.applications import Starlette
 
-
 load_dotenv()
 
 logging.basicConfig()

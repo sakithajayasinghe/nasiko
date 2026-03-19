@@ -901,9 +901,11 @@ def apply_middlewares_to_route(route_name, middlewares):
         "chat-logger": {
             "name": "chat-logger",
             "config": {
-                "chat_service_url": "http://localhost:8002"
-                if K8S_ENABLED
-                else "http://nasiko-chat-history:8002",
+                "chat_service_url": (
+                    "http://localhost:8002"
+                    if K8S_ENABLED
+                    else "http://nasiko-chat-history:8002"
+                ),
                 "timeout": 5000,
             },
         },

@@ -266,9 +266,9 @@ class N8nHandler(BaseHandler):
             if request.n8n_url:
                 update_data["n8n_url"] = request.n8n_url
             if request.api_key:
-                update_data[
-                    "api_key"
-                ] = request.api_key  # Repository will handle encryption
+                update_data["api_key"] = (
+                    request.api_key
+                )  # Repository will handle encryption
                 update_data["last_tested"] = datetime.now(timezone.utc)
             if request.is_active is not None:
                 update_data["is_active"] = request.is_active

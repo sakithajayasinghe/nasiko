@@ -17,7 +17,6 @@ from a2a.types import (
 from a2a.utils.errors import ServerError
 from openai import AsyncOpenAI
 
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 

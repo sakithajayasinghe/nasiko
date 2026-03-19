@@ -1706,9 +1706,9 @@ class K8sBuildWorker:
         env_vars.update(obs_env_vars)
 
         if upload_type == "n8n_register":
-            env_vars[
-                "WEBHOOK_URL"
-            ] = f"http://webhook-placeholder/{agent_name}"  # TODO: Get actual webhook
+            env_vars["WEBHOOK_URL"] = (
+                f"http://webhook-placeholder/{agent_name}"  # TODO: Get actual webhook
+            )
 
         # Deploy based on strategy
         if update_strategy == "blue-green":

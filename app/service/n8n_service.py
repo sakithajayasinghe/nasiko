@@ -42,11 +42,11 @@ class N8nService:
                             "url": self.base_url,
                             "status": "connected",
                             "workflows_accessible": True,
-                            "total_workflows": data.get("count", "unknown")
-                            if isinstance(data, dict)
-                            else len(data)
-                            if isinstance(data, list)
-                            else "unknown",
+                            "total_workflows": (
+                                data.get("count", "unknown")
+                                if isinstance(data, dict)
+                                else len(data) if isinstance(data, list) else "unknown"
+                            ),
                         },
                     }
                 elif response.status_code == 401:
@@ -254,9 +254,9 @@ class N8nService:
             "nodes_count": len(workflow.get("nodes", [])),
             "is_chat_workflow": is_chat,
             "webhook_id": webhook_id,
-            "chat_url": f"{self.base_url}/webhook/{webhook_id}/chat"
-            if webhook_id
-            else None,
+            "chat_url": (
+                f"{self.base_url}/webhook/{webhook_id}/chat" if webhook_id else None
+            ),
             "raw_data": workflow,  # Keep original data for platform-specific fields
         }
 

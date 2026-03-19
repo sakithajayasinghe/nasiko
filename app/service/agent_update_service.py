@@ -1,6 +1,7 @@
 """
 Agent Update Service - Handles agent updates, versioning, and rollbacks
 """
+
 import os
 import time
 import semver
@@ -378,9 +379,9 @@ class AgentUpdateService:
             return AgentUpdateResult(
                 success=False,
                 agent_id=agent_id,
-                new_version=target_version
-                if "target_version" in locals()
-                else "unknown",
+                new_version=(
+                    target_version if "target_version" in locals() else "unknown"
+                ),
                 status="failed",
                 error_message=str(e),
             )

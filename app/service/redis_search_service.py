@@ -207,11 +207,9 @@ class RedisSearchService:
 
                 # Decode bytes to strings
                 user_data = {
-                    k.decode()
-                    if isinstance(k, bytes)
-                    else k: v.decode()
-                    if isinstance(v, bytes)
-                    else v
+                    k.decode() if isinstance(k, bytes) else k: (
+                        v.decode() if isinstance(v, bytes) else v
+                    )
                     for k, v in user_data.items()
                 }
 
@@ -282,11 +280,9 @@ class RedisSearchService:
 
                 # Decode bytes to strings
                 agent_data = {
-                    k.decode()
-                    if isinstance(k, bytes)
-                    else k: v.decode()
-                    if isinstance(v, bytes)
-                    else v
+                    k.decode() if isinstance(k, bytes) else k: (
+                        v.decode() if isinstance(v, bytes) else v
+                    )
                     for k, v in agent_data.items()
                 }
 
@@ -448,11 +444,9 @@ class RedisSearchService:
             # Remove from role index
             if user_data:
                 user_data = {
-                    k.decode()
-                    if isinstance(k, bytes)
-                    else k: v.decode()
-                    if isinstance(v, bytes)
-                    else v
+                    k.decode() if isinstance(k, bytes) else k: (
+                        v.decode() if isinstance(v, bytes) else v
+                    )
                     for k, v in user_data.items()
                 }
                 role = user_data.get("role", "User")
@@ -484,11 +478,9 @@ class RedisSearchService:
 
             if agent_data:
                 agent_data = {
-                    k.decode()
-                    if isinstance(k, bytes)
-                    else k: v.decode()
-                    if isinstance(v, bytes)
-                    else v
+                    k.decode() if isinstance(k, bytes) else k: (
+                        v.decode() if isinstance(v, bytes) else v
+                    )
                     for k, v in agent_data.items()
                 }
 

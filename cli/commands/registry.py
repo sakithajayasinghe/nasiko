@@ -1,6 +1,7 @@
 """
 Registry management commands for the Nasiko CLI.
 """
+
 from datetime import datetime
 from typing import Optional
 

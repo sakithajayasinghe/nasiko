@@ -269,10 +269,12 @@ class AgentBuildRequest(BaseModel):
 class AgentDeployRequest(BaseModel):
     agent_id: str
     build_id: str  # The specific build ID to deploy
-    port: int = 5000  # Port the agent listens on (changed from 8000 to match actual agent implementations)
-    env_vars: Optional[
-        Dict[str, str]
-    ] = None  # Optional environment variables for the agent
+    port: int = (
+        5000  # Port the agent listens on (changed from 8000 to match actual agent implementations)
+    )
+    env_vars: Optional[Dict[str, str]] = (
+        None  # Optional environment variables for the agent
+    )
 
 
 class AgentBuildStatusUpdateRequest(BaseModel):
@@ -423,9 +425,9 @@ class AgentVersionInfo(BaseModel):
 
 
 class AgentUpdateRequest(BaseModel):
-    version: Optional[
-        str
-    ] = "auto"  # "auto", "major", "minor", "patch", or specific version
+    version: Optional[str] = (
+        "auto"  # "auto", "major", "minor", "patch", or specific version
+    )
     update_strategy: str = "rolling"  # "rolling" or "blue-green"
     cleanup_old: bool = True
     description: Optional[str] = None  # Update description

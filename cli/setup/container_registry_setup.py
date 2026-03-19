@@ -192,8 +192,7 @@ def deploy_ecr_refresher(region: str, account_id: str, namespaces: list = None):
     # 3. Create new secret
     # We loop through all target namespaces.
 
-    script = textwrap.dedent(
-        f"""
+    script = textwrap.dedent(f"""
         curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
         chmod +x kubectl
         mv kubectl /usr/local/bin/
@@ -209,8 +208,7 @@ def deploy_ecr_refresher(region: str, account_id: str, namespaces: list = None):
                 --docker-password=$TOKEN \\
                 -n $ns
         done
-    """
-    ).strip()
+    """).strip()
 
     # 1. RBAC Manifests (Permissions to manage secrets)
     # We need a ClusterRole because we are managing secrets in multiple namespaces.
@@ -511,7 +509,9 @@ def setup_do_registry(registry_name: str):
                 sys.exit(1)
             else:
                 # Real failure
-                console.print(f"[red]❌ Failed to create registry '{registry_name}'.[/]")
+                console.print(
+                    f"[red]❌ Failed to create registry '{registry_name}'.[/]"
+                )
                 console.print(f"[dim]{err_msg}[/]")
                 console.print(
                     f"[yellow]   Hint: Registry names are global and must be unique across ALL DigitalOcean users.[/]"

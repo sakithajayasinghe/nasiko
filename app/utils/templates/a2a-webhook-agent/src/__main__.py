@@ -20,7 +20,6 @@ from webhook_agent_executor import (
 from starlette.applications import Starlette
 from starlette.middleware.cors import CORSMiddleware
 
-
 load_dotenv()
 
 logging.basicConfig()

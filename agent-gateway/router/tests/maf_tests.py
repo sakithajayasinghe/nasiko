@@ -20,7 +20,6 @@ from langchain_community.vectorstores.faiss import InMemoryDocstore
 from router.src.core.routing_engine import RoutingEngine
 from router.src.config import settings
 
-
 # AGENT_CARDS_DIR = "router/data/agent_cards"
 AGENT_CARDS_DIR = "router/data/maf_agent_cards"
 MAF_IDEAS_DIR = "router/data/maf_ideas"

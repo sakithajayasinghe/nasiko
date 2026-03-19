@@ -1,6 +1,7 @@
 """
 GitHub Repository - GitHub credentials operations
 """
+
 from datetime import datetime, timezone
 from .base_repository import BaseRepository
 

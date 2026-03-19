@@ -1,6 +1,7 @@
 """
 Main Repository - Combines all repository modules
 """
+
 from bson import ObjectId
 
 from .registry_repository import RegistryRepository

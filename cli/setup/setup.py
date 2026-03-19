@@ -2086,8 +2086,7 @@ def bootstrap(
     # --- FINAL SUMMARY ---
     if registry_type == RegistryType.harbor and domain is None:
         # Local Development Summary
-        console.print(
-            f"""
+        console.print(f"""
     [bold green]🚀 NASIKO LOCAL DEVELOPMENT SETUP COMPLETE![/]
     
     [bold]Harbor Registry (Local):[/bold]
@@ -2122,12 +2121,10 @@ def bootstrap(
     • Access Dashboard: [cyan]kubectl port-forward -n kubernetes-dashboard svc/kubernetes-dashboard 8443:443[/]
     • URL: [cyan]https://localhost:8443[/]
     • Get Token: [cyan]kubectl -n kubernetes-dashboard create token admin-user[/]
-    """
-        )
+    """)
     else:
         # Production/Cloud Summary
-        console.print(
-            f"""
+        console.print(f"""
     [bold green]🚀 NASIKO CLUSTER SETUP COMPLETE![/]
     
     [bold]Registry Configuration:[/bold]
@@ -2145,8 +2142,7 @@ def bootstrap(
 
     [bold]Next Steps:[/bold]
     • If using Harbor, ensure DNS for [bold]{domain}[/] points to the Harbor Ingress IP.
-    """
-        )
+    """)
 
 
 if __name__ == "__main__":

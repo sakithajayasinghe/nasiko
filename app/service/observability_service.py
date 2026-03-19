@@ -1033,10 +1033,10 @@ class ObservabilityService:
                                     cleaned_trace_data = {"id": trace_data.get("id")}
                                     cost_summary = trace_data.get("costSummary")
                                     if cost_summary:
-                                        cleaned_trace_data[
-                                            "costSummary"
-                                        ] = self._convert_keys_to_snake_case(
-                                            cost_summary
+                                        cleaned_trace_data["costSummary"] = (
+                                            self._convert_keys_to_snake_case(
+                                                cost_summary
+                                            )
                                         )
                                     cleaned_root_span["trace"] = cleaned_trace_data
 
@@ -1096,9 +1096,11 @@ class ObservabilityService:
                         "cost_summary": cost_summary,
                         "latency_p50": session_data.get("latencyP50"),
                         "traces": cleaned_traces_snake,
-                        "pagination": page_info
-                        if page_info
-                        else {"end_cursor": None, "has_next_page": False},
+                        "pagination": (
+                            page_info
+                            if page_info
+                            else {"end_cursor": None, "has_next_page": False}
+                        ),
                     }
                 }
             }
@@ -1111,24 +1113,36 @@ class ObservabilityService:
             fallback_response = {
                 "data": {
                     "session": {
-                        "id": session_data.get("id", "")
-                        if "session_data" in locals() and session_data
-                        else "",
-                        "session_id": session_data.get("sessionId", "")
-                        if "session_data" in locals() and session_data
-                        else "",
-                        "num_traces": session_data.get("numTraces", 0)
-                        if "session_data" in locals() and session_data
-                        else 0,
-                        "token_usage": session_data.get("tokenUsage", {"total": 0.0})
-                        if "session_data" in locals() and session_data
-                        else {"total": 0.0},
-                        "cost_summary": session_data.get("costSummary", {})
-                        if "session_data" in locals() and session_data
-                        else {},
-                        "latency_p50": session_data.get("latencyP50", None)
-                        if "session_data" in locals() and session_data
-                        else None,
+                        "id": (
+                            session_data.get("id", "")
+                            if "session_data" in locals() and session_data
+                            else ""
+                        ),
+                        "session_id": (
+                            session_data.get("sessionId", "")
+                            if "session_data" in locals() and session_data
+                            else ""
+                        ),
+                        "num_traces": (
+                            session_data.get("numTraces", 0)
+                            if "session_data" in locals() and session_data
+                            else 0
+                        ),
+                        "token_usage": (
+                            session_data.get("tokenUsage", {"total": 0.0})
+                            if "session_data" in locals() and session_data
+                            else {"total": 0.0}
+                        ),
+                        "cost_summary": (
+                            session_data.get("costSummary", {})
+                            if "session_data" in locals() and session_data
+                            else {}
+                        ),
+                        "latency_p50": (
+                            session_data.get("latencyP50", None)
+                            if "session_data" in locals() and session_data
+                            else None
+                        ),
                         "traces": [],  # Empty list instead of connection object
                         "pagination": {"end_cursor": None, "has_next_page": False},
                     }

@@ -1,6 +1,7 @@
 """
 N8N Repository - N8N credentials operations
 """
+
 from datetime import datetime, timezone
 from .base_repository import BaseRepository
 

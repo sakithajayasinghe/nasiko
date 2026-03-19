@@ -15,9 +15,9 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install dependencies
-        run: pip install black ruff
+        run: pip install black==26.3.1 ruff mypy
       - name: Check formatting
-        run: black --check --target-version py312 .
+        run: black --check .
       - name: Lint
         run: ruff check .
 
@@ -29,6 +29,6 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install dependencies
-        run: pip install mypy
+        run: pip install black==26.3.1 ruff mypy
       - name: Type check
         run: mypy . --ignore-missing-imports || true

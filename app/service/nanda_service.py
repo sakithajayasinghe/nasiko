@@ -329,9 +329,11 @@ class NANDAService:
                 "total_agents": total_agents,
                 "online_agents": online_agents,
                 "offline_agents": offline_agents,
-                "online_percentage": round((online_agents / total_agents * 100), 2)
-                if total_agents > 0
-                else 0,
+                "online_percentage": (
+                    round((online_agents / total_agents * 100), 2)
+                    if total_agents > 0
+                    else 0
+                ),
                 "categories": categories,
                 "top_specialties": dict(
                     sorted(specialties.items(), key=lambda x: x[1], reverse=True)[:10]

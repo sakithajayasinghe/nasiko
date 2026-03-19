@@ -1,6 +1,7 @@
 """
 Pydantic models for A2A protocol.
 """
+
 import uuid
 from typing import List, Optional, Dict, Any, Literal
 from pydantic import BaseModel, Field

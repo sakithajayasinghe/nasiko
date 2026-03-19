@@ -1,6 +1,7 @@
 """
 Base Repository - Shared functionality for all repository modules
 """
+
 import os
 import base64
 import cryptography.fernet

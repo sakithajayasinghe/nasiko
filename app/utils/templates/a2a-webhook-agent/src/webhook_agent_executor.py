@@ -13,7 +13,6 @@ from a2a.types import (
 from a2a.utils.errors import ServerError
 from webhook_agent import WebhookAgent
 
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 

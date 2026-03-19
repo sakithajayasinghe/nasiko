@@ -865,9 +865,9 @@ class NasikoDeployer:
         elif provider == "aws":
             # AWS NLB annotations (works with in-tree controller)
             annotations["service.beta.kubernetes.io/aws-load-balancer-type"] = "nlb"
-            annotations[
-                "service.beta.kubernetes.io/aws-load-balancer-scheme"
-            ] = "internet-facing"
+            annotations["service.beta.kubernetes.io/aws-load-balancer-scheme"] = (
+                "internet-facing"
+            )
             console.print("[cyan]✅ Configured AWS NLB LoadBalancer[/]")
 
     def get_kong_gateway_url(self, timeout=300, check_interval=10):

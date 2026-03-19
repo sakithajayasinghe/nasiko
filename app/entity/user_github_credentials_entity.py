@@ -1,6 +1,7 @@
 """
 User GitHub Credentials Entity - Models for storing encrypted GitHub tokens per user
 """
+
 from enum import Enum
 
 

@@ -78,9 +78,9 @@ class RegistryHandler(BaseHandler):
         capabilities_dict = (
             registry.capabilities.model_dump()
             if hasattr(registry.capabilities, "model_dump")
-            else registry.capabilities
-            if isinstance(registry.capabilities, dict)
-            else {}
+            else (
+                registry.capabilities if isinstance(registry.capabilities, dict) else {}
+            )
         )
         skills_list = (
             [
@@ -122,41 +122,57 @@ class RegistryHandler(BaseHandler):
             version=registry.version,
             description=registry.description,
             url=registry.url,
-            preferredTransport=registry.preferredTransport
-            if hasattr(registry, "preferredTransport")
-            else "JSONRPC",
-            protocolVersion=registry.protocolVersion
-            if hasattr(registry, "protocolVersion")
-            else "0.2.9",
+            preferredTransport=(
+                registry.preferredTransport
+                if hasattr(registry, "preferredTransport")
+                else "JSONRPC"
+            ),
+            protocolVersion=(
+                registry.protocolVersion
+                if hasattr(registry, "protocolVersion")
+                else "0.2.9"
+            ),
             provider=provider_dict,
-            iconUrl=registry.iconUrl
-            if hasattr(registry, "iconUrl") and registry.iconUrl
-            else None,
-            documentationUrl=registry.documentationUrl
-            if hasattr(registry, "documentationUrl") and registry.documentationUrl
-            else None,
+            iconUrl=(
+                registry.iconUrl
+                if hasattr(registry, "iconUrl") and registry.iconUrl
+                else None
+            ),
+            documentationUrl=(
+                registry.documentationUrl
+                if hasattr(registry, "documentationUrl") and registry.documentationUrl
+                else None
+            ),
             capabilities=capabilities_dict,
-            securitySchemes=registry.securitySchemes
-            if hasattr(registry, "securitySchemes")
-            else {},
+            securitySchemes=(
+                registry.securitySchemes if hasattr(registry, "securitySchemes") else {}
+            ),
             security=registry.security if hasattr(registry, "security") else [],
             skills=skills_list,
-            tags=registry.tags
-            if hasattr(registry, "tags") and registry.tags
-            else [],  # Combined tags from skills
-            defaultInputModes=registry.defaultInputModes
-            if hasattr(registry, "defaultInputModes")
-            else [],
-            defaultOutputModes=registry.defaultOutputModes
-            if hasattr(registry, "defaultOutputModes")
-            else [],
-            supportsAuthenticatedExtendedCard=registry.supportsAuthenticatedExtendedCard
-            if hasattr(registry, "supportsAuthenticatedExtendedCard")
-            else False,
+            tags=(
+                registry.tags if hasattr(registry, "tags") and registry.tags else []
+            ),  # Combined tags from skills
+            defaultInputModes=(
+                registry.defaultInputModes
+                if hasattr(registry, "defaultInputModes")
+                else []
+            ),
+            defaultOutputModes=(
+                registry.defaultOutputModes
+                if hasattr(registry, "defaultOutputModes")
+                else []
+            ),
+            supportsAuthenticatedExtendedCard=(
+                registry.supportsAuthenticatedExtendedCard
+                if hasattr(registry, "supportsAuthenticatedExtendedCard")
+                else False
+            ),
             signatures=registry.signatures if hasattr(registry, "signatures") else [],
-            additionalInterfaces=registry.additionalInterfaces
-            if hasattr(registry, "additionalInterfaces")
-            else None,
+            additionalInterfaces=(
+                registry.additionalInterfaces
+                if hasattr(registry, "additionalInterfaces")
+                else None
+            ),
             created_at=created_at_str,
             updated_at=updated_at_str,
         )
@@ -199,9 +215,11 @@ class RegistryHandler(BaseHandler):
                 capabilities_dict = (
                     registry.capabilities.model_dump()
                     if hasattr(registry.capabilities, "model_dump")
-                    else registry.capabilities
-                    if isinstance(registry.capabilities, dict)
-                    else {}
+                    else (
+                        registry.capabilities
+                        if isinstance(registry.capabilities, dict)
+                        else {}
+                    )
                 )
                 skills_list = (
                     [
@@ -219,17 +237,23 @@ class RegistryHandler(BaseHandler):
                     version=registry.version,
                     description=registry.description,
                     url=registry.url,
-                    preferredTransport=registry.preferredTransport
-                    if hasattr(registry, "preferredTransport")
-                    else "JSONRPC",
+                    preferredTransport=(
+                        registry.preferredTransport
+                        if hasattr(registry, "preferredTransport")
+                        else "JSONRPC"
+                    ),
                     capabilities=capabilities_dict,
                     skills=skills_list,
-                    defaultInputModes=registry.defaultInputModes
-                    if hasattr(registry, "defaultInputModes")
-                    else [],
-                    defaultOutputModes=registry.defaultOutputModes
-                    if hasattr(registry, "defaultOutputModes")
-                    else [],
+                    defaultInputModes=(
+                        registry.defaultInputModes
+                        if hasattr(registry, "defaultInputModes")
+                        else []
+                    ),
+                    defaultOutputModes=(
+                        registry.defaultOutputModes
+                        if hasattr(registry, "defaultOutputModes")
+                        else []
+                    ),
                 )
                 registry_items.append(item)
 
@@ -516,12 +540,12 @@ class RegistryHandler(BaseHandler):
                             tags = registry.tags
 
                         user_agent = SimpleUserAgentResponse(
-                            agent_id=registry.id
-                            if hasattr(registry, "id")
-                            else agent_id,
-                            name=registry.name
-                            if hasattr(registry, "name")
-                            else agent_id,
+                            agent_id=(
+                                registry.id if hasattr(registry, "id") else agent_id
+                            ),
+                            name=(
+                                registry.name if hasattr(registry, "name") else agent_id
+                            ),
                             icon_url=icon_url,
                             tags=tags,
                             description=description,

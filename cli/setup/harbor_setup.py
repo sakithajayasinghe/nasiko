@@ -310,17 +310,14 @@ def deploy(
         # 6. Get LoadBalancer IP
         lb_ip = get_ingress_ip()
 
-        console.print(
-            f"""
+        console.print(f"""
         [bold green]✅ Deployment Complete![/]
         
         1. DNS: Point [bold]{domain}[/] to: [bold cyan]{lb_ip}[/]
         2. Access: https://{domain}
-        """
-        )
+        """)
     else:
-        console.print(
-            f"""
+        console.print(f"""
         [bold green]✅ Harbor Deployed for Local Access![/]
         
         • Harbor Core: http://localhost:30002
@@ -328,8 +325,7 @@ def deploy(
         • Username: {username}
         • Password: {password}
         • Access via NodePort from host machine
-        """
-        )
+        """)
 
 
 if __name__ == "__main__":

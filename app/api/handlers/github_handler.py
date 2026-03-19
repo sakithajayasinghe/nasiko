@@ -190,9 +190,11 @@ class GitHubHandler(BaseHandler):
             return AgentUploadResponse(
                 data=agent_upload_data,
                 status_code=201 if result.success else 400,
-                message="GitHub repository cloned and uploaded successfully"
-                if result.success
-                else f"Upload failed: {result.status}",
+                message=(
+                    "GitHub repository cloned and uploaded successfully"
+                    if result.success
+                    else f"Upload failed: {result.status}"
+                ),
             )
         except Exception as e:
             await self.handle_service_error("clone_github_repository", e)

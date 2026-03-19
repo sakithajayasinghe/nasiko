@@ -326,8 +326,7 @@ def deploy(
 
     auth_method = "IAM Role (IRSA)" if has_iam_role else "Username/Password"
 
-    console.print(
-        f"""
+    console.print(f"""
     [bold]Connection Info:[/bold]
     • Address: [green]tcp://buildkitd.buildkit.svc.cluster.local:1234[/]
     • Registry: [green]{clean_registry}[/]
@@ -336,8 +335,7 @@ def deploy(
     [bold]How to use in your Nasiko Backend:[/bold]
     1. Set env var: [cyan]BUILDKIT_HOST=tcp://buildkitd.buildkit.svc.cluster.local:1234[/]
     2. Ensure your job logic sets the image name to: [cyan]{clean_registry}/<your-project>/<image>:<tag>[/]
-    """
-    )
+    """)
 
 
 if __name__ == "__main__":

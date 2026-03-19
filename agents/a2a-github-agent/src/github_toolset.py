@@ -133,9 +133,9 @@ class GitHubToolset:
                             description=repo.description,
                             url=repo.html_url,
                             updated_at=repo.updated_at.isoformat(),
-                            pushed_at=repo.pushed_at.isoformat()
-                            if repo.pushed_at
-                            else None,
+                            pushed_at=(
+                                repo.pushed_at.isoformat() if repo.pushed_at else None
+                            ),
                             language=repo.language,
                             stars=repo.stargazers_count,
                             forks=repo.forks_count,
@@ -250,9 +250,9 @@ class GitHubToolset:
                         description=repo.description,
                         url=repo.html_url,
                         updated_at=repo.updated_at.isoformat(),
-                        pushed_at=repo.pushed_at.isoformat()
-                        if repo.pushed_at
-                        else None,
+                        pushed_at=(
+                            repo.pushed_at.isoformat() if repo.pushed_at else None
+                        ),
                         language=repo.language,
                         stars=repo.stargazers_count,
                         forks=repo.forks_count,

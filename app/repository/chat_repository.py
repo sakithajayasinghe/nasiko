@@ -1,6 +1,7 @@
 """
 Chat Repository - Chat sessions and history operations
 """
+
 import random
 from datetime import datetime, timezone
 from typing import Optional

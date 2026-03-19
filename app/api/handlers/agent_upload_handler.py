@@ -232,9 +232,11 @@ class AgentUploadHandler(BaseHandler):
                         # Get skills
                         if hasattr(registry_entry, "skills") and registry_entry.skills:
                             skills = [
-                                skill.model_dump()
-                                if hasattr(skill, "model_dump")
-                                else skill
+                                (
+                                    skill.model_dump()
+                                    if hasattr(skill, "model_dump")
+                                    else skill
+                                )
                                 for skill in registry_entry.skills
                             ]
                 except:

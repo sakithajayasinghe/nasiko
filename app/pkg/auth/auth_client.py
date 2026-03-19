@@ -1,6 +1,7 @@
 """
 Auth Client - Interface to communicate with the auth service
 """
+
 import httpx
 import os
 from typing import List, Optional

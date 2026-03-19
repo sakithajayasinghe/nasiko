@@ -2,6 +2,7 @@
 """
 Superuser initialization script for Docker Compose setup
 """
+
 import sys
 import time
 import os

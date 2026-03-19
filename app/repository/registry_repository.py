@@ -1,6 +1,7 @@
 """
 Registry Repository - Agent registry operations
 """
+
 from bson import ObjectId
 from .base_repository import BaseRepository
 
