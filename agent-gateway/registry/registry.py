@@ -324,8 +324,8 @@ def register_service_in_kong(service: ServiceInfo) -> bool:
             "name": service.name,
             "url": service_url,
             "connect_timeout": 60000,
-            "write_timeout": 60000,
-            "read_timeout": 60000,
+            "write_timeout": 300000,
+            "read_timeout": 300000,
             "retries": 3,
             "protocol": "http"
         }
@@ -658,8 +658,8 @@ def register_proxy_service_in_kong(service_config):
             "name": service_config["name"],
             "url": service_url,
             "connect_timeout": 60000,
-            "write_timeout": 60000,
-            "read_timeout": 60000,
+            "write_timeout": 300000,
+            "read_timeout": 300000,
             "retries": 3,
             "protocol": "http"
         }
