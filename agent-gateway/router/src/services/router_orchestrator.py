@@ -169,19 +169,22 @@ class RouterOrchestrator:
                 return
 
             # Send request to selected agent
-            async for response in self._send_agent_request(request, files, agent_url, token):
+            async for response in self._send_agent_request(
+                request, files, agent_url, token
+            ):
                 yield response
 
         except Exception as e:
             error_msg = f"Failed to communicate with selected agent: {str(e)}"
             logger.error(error_msg)
             yield self._router_response(error_msg, "", False, agent_url)
+
     async def _send_agent_request(
         self,
         request: UserRequest,
         files: List[Tuple[str, Tuple[str, bytes, str]]],
         agent_url: str,
-        token: str
+        token: str,
     ) -> AsyncGenerator[str, None]:
         """Send request to agent and yield response."""
 

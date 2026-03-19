@@ -11,6 +11,7 @@ class RouterOutput(BaseModel):
 
 class UserRequest(BaseModel):
     """Request body model for routing requests."""
+
     session_id: str
     query: str
     route: str | None = None
@@ -18,6 +19,7 @@ class UserRequest(BaseModel):
 
 class RouterResponse(BaseModel):
     """Response model for router responses."""
+
     message: str
     is_int_response: bool
     agent_id: str | None

@@ -12,6 +12,7 @@ from rich.panel import Panel
 from rich.table import Table
 import sys
 import os
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.settings import APIEndpoints
@@ -19,17 +20,20 @@ from core.api_client import get_api_client
 
 console = Console()
 
+
 def list_agents_command(format_type: str = "table", show_details: bool = False):
     """Get list of all agents from registry"""
 
     try:
         client = get_api_client()
         response = client.get(APIEndpoints.REGISTRY_ALL_AGENTS, True)
-        data = client.handle_response(response, success_message="Agents retrieved successfully")
-        
+        data = client.handle_response(
+            response, success_message="Agents retrieved successfully"
+        )
+
         if not data:
             return
-            
+
         agents = data.get("data", [])
         total = len(agents)
 
@@ -53,7 +57,9 @@ def list_agents_command(format_type: str = "table", show_details: bool = False):
     except requests.exceptions.Timeout:
         console.print("[red]Error: Request timed out. The server might be busy.[/red]")
     except requests.exceptions.HTTPError as e:
-        console.print(f"[red]Error: HTTP {e.response.status_code} - {e.response.text}[/red]")
+        console.print(
+            f"[red]Error: HTTP {e.response.status_code} - {e.response.text}[/red]"
+        )
     except Exception as e:
         console.print(f"[red]Error: {str(e)}[/red]")
 
@@ -68,10 +74,16 @@ def get_agent_command(
     client = get_api_client()
     try:
         if by_agent_id:
-            response = client.get(APIEndpoints.REGISTRY_BY_AGENT_ID.format(agent_id=agent_identifier), True)
+            response = client.get(
+                APIEndpoints.REGISTRY_BY_AGENT_ID.format(agent_id=agent_identifier),
+                True,
+            )
             identifier_type = "Agent ID"
         else:
-            response = client.get(APIEndpoints.REGISTRY_BY_AGENT_NAME.format(agent_name=agent_identifier), True)
+            response = client.get(
+                APIEndpoints.REGISTRY_BY_AGENT_NAME.format(agent_name=agent_identifier),
+                True,
+            )
             identifier_type = "Agent Name"
 
         if response.status_code == 404:
@@ -95,7 +107,9 @@ def get_agent_command(
     except requests.exceptions.Timeout:
         console.print("[red]Error: Request timed out. The server might be busy.[/red]")
     except requests.exceptions.HTTPError as e:
-        console.print(f"[red]Error: HTTP {e.response.status_code} - {e.response.text}[/red]")
+        console.print(
+            f"[red]Error: HTTP {e.response.status_code} - {e.response.text}[/red]"
+        )
     except Exception as e:
         console.print(f"[red]Error: {str(e)}[/red]")
 
@@ -135,7 +149,9 @@ def display_agent_details(agent_data):
         urls_info += f"[bold]Documentation:[/bold] {actual_data['documentationUrl']}\n"
 
     if urls_info:
-        console.print(Panel(urls_info.strip(), title="Resources", border_style="magenta"))
+        console.print(
+            Panel(urls_info.strip(), title="Resources", border_style="magenta")
+        )
 
     # Capabilities
     capabilities = actual_data.get("capabilities", {})
@@ -143,7 +159,9 @@ def display_agent_details(agent_data):
         cap_info = ""
         for key, value in capabilities.items():
             cap_info += f"[bold]{key}:[/bold] {value}\n"
-        console.print(Panel(cap_info.strip(), title="Capabilities", border_style="green"))
+        console.print(
+            Panel(cap_info.strip(), title="Capabilities", border_style="green")
+        )
 
     # Input/Output Modes
     io_info = ""
@@ -156,15 +174,21 @@ def display_agent_details(agent_data):
         io_info += f"[bold]Output Modes:[/bold] {', '.join(default_output_modes)}\n"
 
     if io_info:
-        console.print(Panel(io_info.strip(), title="Input/Output Modes", border_style="cyan"))
+        console.print(
+            Panel(io_info.strip(), title="Input/Output Modes", border_style="cyan")
+        )
 
     # Security
     security_schemes = actual_data.get("securitySchemes", {})
     security = actual_data.get("security", [])
     if security_schemes or security:
-        security_info = f"[bold]Security Schemes:[/bold] {len(security_schemes)} configured\n"
+        security_info = (
+            f"[bold]Security Schemes:[/bold] {len(security_schemes)} configured\n"
+        )
         security_info += f"[bold]Security:[/bold] {len(security)} entries"
-        console.print(Panel(security_info.strip(), title="Security", border_style="red"))
+        console.print(
+            Panel(security_info.strip(), title="Security", border_style="red")
+        )
 
     # AgentCard Skills
     skills = actual_data.get("skills", [])
@@ -210,9 +234,7 @@ def display_agent_details(agent_data):
 
     additional_interfaces = actual_data.get("additionalInterfaces")
     if additional_interfaces:
-        additional_info += (
-            f"[bold]Additional Interfaces:[/bold] {len(additional_interfaces)} interfaces\n"
-        )
+        additional_info += f"[bold]Additional Interfaces:[/bold] {len(additional_interfaces)} interfaces\n"
 
     created_at = actual_data.get("created_at")
     if created_at:
@@ -226,7 +248,11 @@ def display_agent_details(agent_data):
 
     if additional_info:
         console.print(
-            Panel(additional_info.strip(), title="Additional Information", border_style="cyan")
+            Panel(
+                additional_info.strip(),
+                title="Additional Information",
+                border_style="cyan",
+            )
         )
 
 
@@ -308,6 +334,7 @@ def display_agents_table(agents, show_details=False):
 
     console.print(table)
 
+
 def display_agents_json(agents):
     """Display agents in JSON format"""
     console.print(JSON.from_data(agents))
@@ -344,7 +371,7 @@ def api_docs_command():
         # Check if the API server is running and get the docs URL
         client = get_api_client()
         base_url = client.base_url
-        
+
         docs_url = f"{base_url}/docs"
         redoc_url = f"{base_url}/redoc"
         openapi_url = f"{base_url}/openapi.json"
@@ -395,7 +422,9 @@ Visit the Swagger UI link above for interactive documentation where you can:
         client = get_api_client()
         console.print(f"[yellow]Expected server URL: {client.base_url}[/yellow]")
     except requests.exceptions.Timeout:
-        console.print("[red]Error: Request timed out. The server might be starting up.[/red]")
+        console.print(
+            "[red]Error: Request timed out. The server might be starting up.[/red]"
+        )
     except Exception as e:
         console.print(f"[red]Error: {str(e)}[/red]")
 
@@ -404,4 +433,6 @@ Visit the Swagger UI link above for interactive documentation where you can:
         base_url = client.base_url
         docs_url = f"{base_url}/docs"
 
-        console.print(f"\n[yellow]📚 When the server is running, visit: {docs_url}[/yellow]")
+        console.print(
+            f"\n[yellow]📚 When the server is running, visit: {docs_url}[/yellow]"
+        )

@@ -5,6 +5,7 @@ Contains all constants and configuration settings.
 
 import os
 
+
 class Config:
     # Docker Configuration
     DOCKER_NETWORK = os.getenv("DOCKER_NETWORK", "nasiko-network")
@@ -21,9 +22,10 @@ class Config:
     REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
     REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
     REDIS_DB = int(os.getenv("REDIS_DB", "0"))
-    
+
     # API Keys
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+
 
 # Legacy constants for backward compatibility
 DOCKER_NETWORK = Config.DOCKER_NETWORK
@@ -36,7 +38,7 @@ AGENT_IMAGE_TAG = Config.AGENT_IMAGE_TAG
 
 # Service Startup Configuration
 NASIKO_APP_STARTUP_CHECK_INTERVAL = 30  # seconds
-NASIKO_WEB_STARTUP_DELAY = 5   # seconds
+NASIKO_WEB_STARTUP_DELAY = 5  # seconds
 KONG_STARTUP_DELAY = 10  # seconds
 OLLAMA_STARTUP_DELAY = 15  # seconds
 

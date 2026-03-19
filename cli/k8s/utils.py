@@ -25,7 +25,7 @@ def create_dynamic_helm_values(values_dict):
     """
     values_file = None
     try:
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             yaml.dump(values_dict, f, default_flow_style=False)
             values_file = f.name
         console.print(f"[cyan]Generated dynamic values file: {values_file}[/]")
@@ -45,7 +45,7 @@ def deploy_helm_chart(
     namespace="nasiko",
     environment="default",
     additional_args=None,
-    helm_runner=None
+    helm_runner=None,
 ):
     """Generic function to deploy any Helm chart with dynamic values
 
@@ -71,11 +71,15 @@ def deploy_helm_chart(
 
         # Build helm command
         helm_cmd = [
-            "upgrade", "--install", release_name,
+            "upgrade",
+            "--install",
+            release_name,
             str(chart_path),
-            "--namespace", namespace,
+            "--namespace",
+            namespace,
             "--create-namespace",
-            "-f", values_file
+            "-f",
+            values_file,
         ]
 
         # Add environment-specific values file if it exists
@@ -107,7 +111,9 @@ def cleanup_helm_values_file(values_file):
             os.unlink(values_file)
             console.print(f"[dim]Cleaned up values file: {values_file}[/]")
         except Exception as e:
-            console.print(f"[yellow]Warning: Could not clean up values file {values_file}: {e}[/]")
+            console.print(
+                f"[yellow]Warning: Could not clean up values file {values_file}: {e}[/]"
+            )
 
 
 def validate_helm_values(values_dict, required_keys=None):
@@ -129,7 +135,7 @@ def validate_helm_values(values_dict, required_keys=None):
     missing_keys = []
 
     for key_path in required_keys:
-        keys = key_path.split('.')
+        keys = key_path.split(".")
         current = values_dict
 
         try:

@@ -452,7 +452,6 @@ IMPORTANT:
                     },
                 },
             },
-
             {
                 "type": "function",
                 "function": {

@@ -7,13 +7,13 @@ log = logging.getLogger(__name__)
 def extract_text_from_message(message: Dict[str, Any]) -> str:
     """
     Extract text content from a message with multiple parts.
-    
+
     Args:
         message: Message dictionary containing parts
-        
+
     Returns:
         Extracted text content
-        
+
     Raises:
         ValueError: If message is empty or None
         TypeError: If message is not a dictionary or parts is not a list

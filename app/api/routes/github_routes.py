@@ -23,7 +23,9 @@ def create_github_routes(handlers: HandlerFactory) -> APIRouter:
         summary="GitHub Login",
         description="Returns GitHub OAuth authorization URL",
     )
-    async def github_login(request: Request, user_id: str = Depends(get_user_id_from_token)):
+    async def github_login(
+        request: Request, user_id: str = Depends(get_user_id_from_token)
+    ):
         return await handlers.github.github_login(user_id, request)
 
     @router.get(
@@ -37,7 +39,9 @@ def create_github_routes(handlers: HandlerFactory) -> APIRouter:
     async def github_callback(
         request: Request,
         code: str = Query(..., description="OAuth code from GitHub"),
-        state: str = Query(..., description="Signed state containing OAuth flow metadata"),
+        state: str = Query(
+            ..., description="Signed state containing OAuth flow metadata"
+        ),
     ):
         return await handlers.github.github_callback(code, state, request)
 
@@ -87,7 +91,7 @@ def create_github_routes(handlers: HandlerFactory) -> APIRouter:
         description=(
             "Initiate GitHub OAuth for user authentication (not repo cloning). "
             "Uses the shared /auth/github/callback endpoint."
-        )
+        ),
     )
     async def github_user_login(request: Request):
         """

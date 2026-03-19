@@ -130,7 +130,7 @@ def prepare_agent_card(agent_card: Dict[str, Any]) -> str:
     )
 
     for i, skill in enumerate(agent_card["skills"]):
-        text += f"Skill {i}: {skill['name']}\nDescription: {skill["description"]}"
+        text += f"Skill {i}: {skill['name']}\nDescription: {skill['description']}"
 
     return text
 

@@ -286,9 +286,9 @@ class AgentUploadService:
             agent_dir / "src" / "main.py",
             agent_dir / "main.py",
             agent_dir / "src" / "__main__.py",
-            agent_dir / "__main__.py"
+            agent_dir / "__main__.py",
         ]
-        
+
         main_py_found = False
         for loc in main_py_locations:
             if loc.exists():
@@ -451,41 +451,49 @@ class AgentUploadService:
     async def _get_version_from_agentcard(self, agent_path: str) -> str:
         """Get version from AgentCard.json, fallback to v1.0.0 if not found"""
         try:
-            agentcard = await self.agentcard_service.load_agentcard_from_file(agent_path)
+            agentcard = await self.agentcard_service.load_agentcard_from_file(
+                agent_path
+            )
             if agentcard and "version" in agentcard:
                 version = agentcard["version"]
                 # Ensure version has 'v' prefix for directory naming
-                if not version.startswith('v'):
+                if not version.startswith("v"):
                     version = f"v{version}"
                 self.logger.info(f"Found version {version} in AgentCard.json")
                 return version
             else:
-                self.logger.warning("No version found in AgentCard.json, using default v1.0.0")
+                self.logger.warning(
+                    "No version found in AgentCard.json, using default v1.0.0"
+                )
                 return "v1.0.0"
         except Exception as e:
-            self.logger.warning(f"Failed to read version from AgentCard: {e}, using default v1.0.0")
+            self.logger.warning(
+                f"Failed to read version from AgentCard: {e}, using default v1.0.0"
+            )
             return "v1.0.0"
 
     async def _copy_to_agents_directory(self, temp_dir: str, agent_name: str):
         """Copy agent from temp directory to agents/{agent_name}/{version}/"""
         # Get version from AgentCard.json (will fallback to v1.0.0 if not found)
         version = await self._get_version_from_agentcard(temp_dir)
-        
+
         # Create versioned directory for initial upload
         agent_base_dir = self.agents_directory / agent_name
         target_dir = agent_base_dir / version
-        
+
         # Ensure base directory exists
         agent_base_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # Handle existing agent version
         if target_dir.exists():
-            self.logger.warning(f"Agent {agent_name} {version} already exists, overwriting")
+            self.logger.warning(
+                f"Agent {agent_name} {version} already exists, overwriting"
+            )
             shutil.rmtree(target_dir)
 
         shutil.copytree(temp_dir, target_dir)
         self.logger.info(f"Copied agent to: {target_dir}")
-        
+
         # Return the version used for directory naming
         return version
 
