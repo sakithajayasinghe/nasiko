@@ -515,7 +515,11 @@ class RedisStreamListener:
                 50,
             )
             deployment_result = await self._deploy_agent_container(
-                agent_name, image_tag, owner_id, upload_type
+                agent_name,
+                image_tag,
+                owner_id,
+                upload_type,
+                agent_source_path=agent_source_path,
             )
 
             # Step 5: Update agent registry via backend API
@@ -758,6 +762,7 @@ class RedisStreamListener:
         owner_id: str,
         upload_type: Optional[str] = None,
         webhook_url: Optional[str] = None,
+        agent_source_path: Optional[Path] = None,
     ) -> dict:
         """Deploy agent container with proper networking"""
 
@@ -772,6 +777,18 @@ class RedisStreamListener:
             "OWNER_ID": owner_id or "",
             "OPENAI_API_KEY": Config.OPENAI_API_KEY,
         }
+
+        # Load agent-specific env vars from its .env file if present
+        if agent_source_path:
+            env_file = Path(agent_source_path) / ".env"
+            if env_file.exists():
+                self.logger.info(f"Loading agent env file: {env_file}")
+                with open(env_file) as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and not line.startswith("#") and "=" in line:
+                            key, _, value = line.partition("=")
+                            env_vars[key.strip()] = value.strip()
 
         # Add observability environment variables
         obs_env_vars = await self.get_observability_env_vars(agent_name)
