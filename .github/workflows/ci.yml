@@ -17,7 +17,7 @@ jobs:
       - name: Install dependencies
         run: pip install black ruff
       - name: Check formatting
-        run: black --check .
+        run: black --check --target-version py312 .
       - name: Lint
         run: ruff check .
 
