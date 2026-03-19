@@ -58,7 +58,7 @@ class RegistryManager:
 
             # Always set id to folder name (used for upsert identification and Kong routing)
             registry_data["id"] = agent_folder_name
-            
+
             # Set owner_id if provided
             if owner_id:
                 registry_data["owner_id"] = owner_id
@@ -70,13 +70,17 @@ class RegistryManager:
 
             if action == "upsert":
                 result = self._upsert_agent(agent_folder_name, registry_data)
-                
+
                 # If registry upsert was successful and we have owner_id, create agent permissions
                 if result.get("success", False) and owner_id:
-                    permission_success = self._create_agent_permissions(agent_folder_name, owner_id)
+                    permission_success = self._create_agent_permissions(
+                        agent_folder_name, owner_id
+                    )
                     if not permission_success:
-                        logger.warning(f"Registry upserted but permission creation failed for agent {agent_folder_name}")
-                
+                        logger.warning(
+                            f"Registry upserted but permission creation failed for agent {agent_folder_name}"
+                        )
+
                 return {
                     "success": result.get("success", False),
                     "url": url,
@@ -164,20 +168,26 @@ class RegistryManager:
             # Use same auth service URL as superuser manager
             auth_service_url = os.getenv("AUTH_SERVICE_URL", "http://localhost:8082")
             url = f"{auth_service_url}/auth/agents/{agent_id}/permissions"
-            
-            logger.info(f"Creating permissions for agent {agent_id} with owner {owner_id}")
-            
+
+            logger.info(
+                f"Creating permissions for agent {agent_id} with owner {owner_id}"
+            )
+
             response = requests.post(url, params={"owner_id": owner_id}, timeout=30)
-            
+
             if response.status_code in [200, 201]:
                 logger.info(f"Successfully created permissions for agent {agent_id}")
                 return True
             else:
-                logger.error(f"Failed to create permissions for agent {agent_id}: {response.status_code} - {response.text}")
+                logger.error(
+                    f"Failed to create permissions for agent {agent_id}: {response.status_code} - {response.text}"
+                )
                 return False
-                
+
         except requests.exceptions.RequestException as e:
-            logger.error(f"Network error creating permissions for agent {agent_id}: {e}")
+            logger.error(
+                f"Network error creating permissions for agent {agent_id}: {e}"
+            )
             return False
         except Exception as e:
             logger.error(f"Error creating permissions for agent {agent_id}: {e}")

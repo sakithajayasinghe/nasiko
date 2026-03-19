@@ -32,7 +32,7 @@ DEFAULT_CLUSTER_NAME = "nasiko"
 
 app = typer.Typer(
     help="Setup and manage Kubernetes clusters on AWS or DigitalOcean.",
-    no_args_is_help=True
+    no_args_is_help=True,
 )
 
 console = Console()
@@ -40,10 +40,17 @@ console = Console()
 
 class Provider(str, enum.Enum):
     """Enumeration for the supported cloud providers."""
+
     aws = "aws"
     digitalocean = "digitalocean"
 
-def _run_command(command: list[str], cwd: Path, env_vars: dict[str, str] = None, verbose: bool = False):
+
+def _run_command(
+    command: list[str],
+    cwd: Path,
+    env_vars: dict[str, str] = None,
+    verbose: bool = False,
+):
     """
     Runs a shell command (like terraform) in a specific directory.
 
@@ -62,9 +69,20 @@ def _run_command(command: list[str], cwd: Path, env_vars: dict[str, str] = None,
 
     # Keywords that indicate important output lines
     important_keywords = [
-        "error", "failed", "warning", "creating", "created", "destroying",
-        "destroyed", "complete", "apply complete", "plan:", "changes",
-        "will be created", "will be destroyed", "will be updated"
+        "error",
+        "failed",
+        "warning",
+        "creating",
+        "created",
+        "destroying",
+        "destroyed",
+        "complete",
+        "apply complete",
+        "plan:",
+        "changes",
+        "will be created",
+        "will be destroyed",
+        "will be updated",
     ]
 
     try:
@@ -74,20 +92,24 @@ def _run_command(command: list[str], cwd: Path, env_vars: dict[str, str] = None,
             cwd=cwd,
             env=process_env,
             stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT, # Redirect stderr to stdout
+            stderr=subprocess.STDOUT,  # Redirect stderr to stdout
             text=True,
-            bufsize=1, # Line-buffered
-            encoding='utf-8'
+            bufsize=1,  # Line-buffered
+            encoding="utf-8",
         ) as process:
             if process.stdout:
                 for line in iter(process.stdout.readline, ""):
                     # Show all output in verbose mode, or only important lines in quiet mode
-                    if verbose or any(keyword in line.lower() for keyword in important_keywords):
+                    if verbose or any(
+                        keyword in line.lower() for keyword in important_keywords
+                    ):
                         print(line, end="")
-                    elif line.strip():  # Show a dot for other non-empty lines to indicate progress
+                    elif (
+                        line.strip()
+                    ):  # Show a dot for other non-empty lines to indicate progress
                         print(".", end="", flush=True)
 
-            process.wait() # Wait for the process to complete
+            process.wait()  # Wait for the process to complete
             print()  # New line after dots
 
             if process.returncode != 0:
@@ -100,6 +122,7 @@ def _run_command(command: list[str], cwd: Path, env_vars: dict[str, str] = None,
     except subprocess.CalledProcessError as e:
         console.print(f"[bold red]Command failed with exit code {e.returncode}[/]")
         raise typer.Exit(code=e.returncode)
+
 
 def get_tf_output(work_dir: Path, key: str, env_vars: dict = None) -> Optional[str]:
     """
@@ -124,22 +147,20 @@ def get_tf_output(work_dir: Path, key: str, env_vars: dict = None) -> Optional[s
             env=process_env,
             capture_output=True,
             text=True,
-            check=True
+            check=True,
         )
         return result.stdout.strip()
     except subprocess.CalledProcessError:
         return None
 
+
 def _prepare_tf_vars(
-    provider: Provider, 
-    cluster_name: str, 
-    region: str, 
-    node_size: str
+    provider: Provider, cluster_name: str, region: str, node_size: str
 ) -> dict[str, str]:
     """Prepares a dictionary of environment variables for Terraform."""
-    
+
     # If called via Python import (setup.py), default args might still be OptionInfo objects.
-    if hasattr(node_size, "default"): 
+    if hasattr(node_size, "default"):
         node_size = node_size.default
 
     tf_vars = {}
@@ -147,14 +168,14 @@ def _prepare_tf_vars(
     # Set common variables
     if cluster_name:
         tf_vars["TF_VAR_cluster_name"] = cluster_name
-    
+
     # Set provider-specific variables
     if provider == Provider.aws:
         if region:
             tf_vars["TF_VAR_aws_region"] = region
         if node_size:
             tf_vars["TF_VAR_instance_type"] = node_size
-    
+
     elif provider == Provider.digitalocean:
         if region:
             tf_vars["TF_VAR_do_region"] = region
@@ -176,7 +197,9 @@ def _prepare_tf_vars(
                 "[bold yellow]DigitalOcean token not found in environment variables "
                 "(DIGITALOCEAN_ACCESS_TOKEN, DO_TOKEN, or TF_VAR_do_token).[/]"
             )
-            do_token = typer.prompt("Enter DigitalOcean Token (will not be echoed)", hide_input=True)
+            do_token = typer.prompt(
+                "Enter DigitalOcean Token (will not be echoed)", hide_input=True
+            )
             if not do_token:
                 console.print("[bold red]DigitalOcean token is required.[/]")
                 raise typer.Exit(1)
@@ -186,20 +209,44 @@ def _prepare_tf_vars(
 
     return tf_vars
 
+
 # --- Typer Commands ---
+
 
 @app.command()
 def create(
-    provider: Provider = typer.Argument(..., help="Cloud provider to use (aws or digitalocean)."),
-    cluster_name: str = typer.Option(DEFAULT_CLUSTER_NAME, "--name", "-n", help="Name for the Kubernetes cluster."),
-    region: str = typer.Option(None, help="Region for the cluster (e.g., 'us-east-1', 'nyc3')."),
-    node_size: str = typer.Option(None, help="Instance type for nodes (e.g., 't3.medium', 's-2vcpu-4gb')."),
-    auto_approve: bool = typer.Option(False, "--yes", "-y", help="Auto-approve Terraform apply."),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show detailed Terraform output."),
-    terraform_dir: str = typer.Option(None, "--terraform-dir", "-t", envvar="NASIKO_TERRAFORM_DIR",
-                                       help="Path to Terraform modules directory."),
-    state_dir: str = typer.Option(None, "--state-dir", "-s", envvar="NASIKO_STATE_DIR",
-                                   help="Path for storing Terraform state."),
+    provider: Provider = typer.Argument(
+        ..., help="Cloud provider to use (aws or digitalocean)."
+    ),
+    cluster_name: str = typer.Option(
+        DEFAULT_CLUSTER_NAME, "--name", "-n", help="Name for the Kubernetes cluster."
+    ),
+    region: str = typer.Option(
+        None, help="Region for the cluster (e.g., 'us-east-1', 'nyc3')."
+    ),
+    node_size: str = typer.Option(
+        None, help="Instance type for nodes (e.g., 't3.medium', 's-2vcpu-4gb')."
+    ),
+    auto_approve: bool = typer.Option(
+        False, "--yes", "-y", help="Auto-approve Terraform apply."
+    ),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Show detailed Terraform output."
+    ),
+    terraform_dir: str = typer.Option(
+        None,
+        "--terraform-dir",
+        "-t",
+        envvar="NASIKO_TERRAFORM_DIR",
+        help="Path to Terraform modules directory.",
+    ),
+    state_dir: str = typer.Option(
+        None,
+        "--state-dir",
+        "-s",
+        envvar="NASIKO_STATE_DIR",
+        help="Path for storing Terraform state.",
+    ),
 ):
     """
     Create and provision a new Kubernetes cluster.
@@ -235,12 +282,19 @@ def create(
 
     # 4. Terraform Init
     console.print("[cyan]Initializing Terraform...[/]")
-    _run_command(["terraform", "init"], cwd=work_dir, env_vars=env_vars, verbose=verbose)
+    _run_command(
+        ["terraform", "init"], cwd=work_dir, env_vars=env_vars, verbose=verbose
+    )
 
     # 5. Terraform Plan
     console.print("[cyan]Planning infrastructure changes...[/]")
     plan_file = "tfplan"
-    _run_command(["terraform", "plan", f"-out={plan_file}"], cwd=work_dir, env_vars=env_vars, verbose=verbose)
+    _run_command(
+        ["terraform", "plan", f"-out={plan_file}"],
+        cwd=work_dir,
+        env_vars=env_vars,
+        verbose=verbose,
+    )
 
     # 6. Terraform Apply
     console.print("[cyan]Applying changes...[/]")
@@ -262,14 +316,28 @@ def create(
 
             if cluster_name_val and region_val:
                 addon_check = subprocess.run(
-                    ["aws", "eks", "describe-addon", "--cluster-name", cluster_name_val,
-                     "--addon-name", "vpc-cni", "--region", region_val],
-                    capture_output=True, text=True
+                    [
+                        "aws",
+                        "eks",
+                        "describe-addon",
+                        "--cluster-name",
+                        cluster_name_val,
+                        "--addon-name",
+                        "vpc-cni",
+                        "--region",
+                        region_val,
+                    ],
+                    capture_output=True,
+                    text=True,
                 )
 
                 if addon_check.returncode != 0:
-                    console.print("[bold yellow]⚠️  Warning: VPC CNI addon not found. Nodes may fail to join cluster.[/]")
-                    console.print(f"[yellow]Run: aws eks create-addon --cluster-name {cluster_name_val} --addon-name vpc-cni --region {region_val}[/]")
+                    console.print(
+                        "[bold yellow]⚠️  Warning: VPC CNI addon not found. Nodes may fail to join cluster.[/]"
+                    )
+                    console.print(
+                        f"[yellow]Run: aws eks create-addon --cluster-name {cluster_name_val} --addon-name vpc-cni --region {region_val}[/]"
+                    )
                 else:
                     console.print("[green]✅ VPC CNI addon verified[/]")
         except Exception as e:
@@ -279,20 +347,33 @@ def create(
     try:
         console.print("[cyan]Fetching cluster details...[/]")
 
-        actual_cluster_name = get_tf_output(work_dir, "cluster_name", env_vars) or cluster_name
+        actual_cluster_name = (
+            get_tf_output(work_dir, "cluster_name", env_vars) or cluster_name
+        )
         filename = f"{actual_cluster_name}-kubeconfig.yaml"
         kubeconfig_path = str(work_dir / filename)
 
         if provider == Provider.aws:
             target_region = region if region else "us-east-1"
 
-            console.print(f"[dim]Generating kubeconfig via AWS CLI for {actual_cluster_name} in {target_region}...[/]")
-            subprocess.run([
-                "aws", "eks", "update-kubeconfig",
-                "--region", target_region,
-                "--name", actual_cluster_name,
-                "--kubeconfig", kubeconfig_path
-            ], check=True, capture_output=True)
+            console.print(
+                f"[dim]Generating kubeconfig via AWS CLI for {actual_cluster_name} in {target_region}...[/]"
+            )
+            subprocess.run(
+                [
+                    "aws",
+                    "eks",
+                    "update-kubeconfig",
+                    "--region",
+                    target_region,
+                    "--name",
+                    actual_cluster_name,
+                    "--kubeconfig",
+                    kubeconfig_path,
+                ],
+                check=True,
+                capture_output=True,
+            )
             # Set proper permissions on kubeconfig (600 = rw-------)
             Path(kubeconfig_path).chmod(0o600)
 
@@ -318,27 +399,61 @@ def create(
     if provider == Provider.aws:
         console.print("[cyan]Configuring default storage class...[/]")
         try:
-            subprocess.run([
-                "kubectl", "patch", "storageclass", "gp2",
-                "-p", '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
-            ], check=True, capture_output=True, text=True)
+            subprocess.run(
+                [
+                    "kubectl",
+                    "patch",
+                    "storageclass",
+                    "gp2",
+                    "-p",
+                    '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}',
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
             console.print("[green]✅ Set gp2 as default storage class[/]")
         except subprocess.CalledProcessError as e:
             console.print(f"[yellow]⚠️  Could not set default storage class: {e}[/]")
-            console.print("[yellow]   This may cause PVC provisioning issues. You can set it manually:[/]")
-            console.print("[cyan]   kubectl patch storageclass gp2 -p '{\"metadata\": {\"annotations\":{\"storageclass.kubernetes.io/is-default-class\":\"true\"}}}'[/]")
+            console.print(
+                "[yellow]   This may cause PVC provisioning issues. You can set it manually:[/]"
+            )
+            console.print(
+                '[cyan]   kubectl patch storageclass gp2 -p \'{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}\'[/]'
+            )
+
 
 @app.command()
 def destroy(
-    provider: Provider = typer.Argument(..., help="Cloud provider to destroy (aws or digitalocean)."),
-    cluster_name: str = typer.Option(DEFAULT_CLUSTER_NAME, "--name", "-n", help="Name of the cluster to destroy."),
-    auto_approve: bool = typer.Option(False, "--yes", "-y", help="Auto-approve Terraform destroy."),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show detailed Terraform output."),
-    terraform_dir: str = typer.Option(None, "--terraform-dir", "-t", envvar="NASIKO_TERRAFORM_DIR",
-                                       help="Path to Terraform modules directory."),
-    state_dir: str = typer.Option(None, "--state-dir", "-s", envvar="NASIKO_STATE_DIR",
-                                   help="Path for storing Terraform state."),
-    cleanup_state: bool = typer.Option(False, "--cleanup", help="Remove local state directory after destroy."),
+    provider: Provider = typer.Argument(
+        ..., help="Cloud provider to destroy (aws or digitalocean)."
+    ),
+    cluster_name: str = typer.Option(
+        DEFAULT_CLUSTER_NAME, "--name", "-n", help="Name of the cluster to destroy."
+    ),
+    auto_approve: bool = typer.Option(
+        False, "--yes", "-y", help="Auto-approve Terraform destroy."
+    ),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Show detailed Terraform output."
+    ),
+    terraform_dir: str = typer.Option(
+        None,
+        "--terraform-dir",
+        "-t",
+        envvar="NASIKO_TERRAFORM_DIR",
+        help="Path to Terraform modules directory.",
+    ),
+    state_dir: str = typer.Option(
+        None,
+        "--state-dir",
+        "-s",
+        envvar="NASIKO_STATE_DIR",
+        help="Path for storing Terraform state.",
+    ),
+    cleanup_state: bool = typer.Option(
+        False, "--cleanup", help="Remove local state directory after destroy."
+    ),
 ):
     """
     Destroy the Kubernetes cluster and all related resources.
@@ -348,12 +463,16 @@ def destroy(
     ensure_terraform()
     ensure_kubectl()
 
-    console.print(f"[red]Starting cluster destruction for: [bold]{provider.value}/{cluster_name}[/][/]")
+    console.print(
+        f"[red]Starting cluster destruction for: [bold]{provider.value}/{cluster_name}[/][/]"
+    )
 
     # Check if state exists for this cluster
     state_info = get_cluster_state_info(provider.value, cluster_name, state_dir)
     if not state_info["exists"] and not state_info["has_modules"]:
-        console.print(f"[yellow]No state found for cluster '{cluster_name}' ({provider.value})[/]")
+        console.print(
+            f"[yellow]No state found for cluster '{cluster_name}' ({provider.value})[/]"
+        )
         console.print("[yellow]Use 'nasiko setup k8s list' to see managed clusters[/]")
         raise typer.Exit(code=1)
 
@@ -364,7 +483,9 @@ def destroy(
 
     # 1. Initialize Terraform
     console.print("[cyan]Initializing Terraform...[/]")
-    _run_command(["terraform", "init"], cwd=work_dir, env_vars=env_vars, verbose=verbose)
+    _run_command(
+        ["terraform", "init"], cwd=work_dir, env_vars=env_vars, verbose=verbose
+    )
 
     # 2. Run destroy
     console.print("[cyan]Destroying infrastructure...[/]")
@@ -384,22 +505,38 @@ def destroy(
 @app.command()
 def output(
     provider: Provider = typer.Argument(..., help="Cloud provider to get outputs for."),
-    cluster_name: str = typer.Option(DEFAULT_CLUSTER_NAME, "--name", "-n", help="Name of the cluster."),
-    terraform_dir: str = typer.Option(None, "--terraform-dir", "-t", envvar="NASIKO_TERRAFORM_DIR",
-                                       help="Path to Terraform modules directory."),
-    state_dir: str = typer.Option(None, "--state-dir", "-s", envvar="NASIKO_STATE_DIR",
-                                   help="Path for storing Terraform state."),
+    cluster_name: str = typer.Option(
+        DEFAULT_CLUSTER_NAME, "--name", "-n", help="Name of the cluster."
+    ),
+    terraform_dir: str = typer.Option(
+        None,
+        "--terraform-dir",
+        "-t",
+        envvar="NASIKO_TERRAFORM_DIR",
+        help="Path to Terraform modules directory.",
+    ),
+    state_dir: str = typer.Option(
+        None,
+        "--state-dir",
+        "-s",
+        envvar="NASIKO_STATE_DIR",
+        help="Path for storing Terraform state.",
+    ),
 ):
     """
     Display the Terraform outputs for an existing cluster.
     """
     ensure_terraform()
 
-    console.print(f"[blue]Fetching outputs for: [bold]{provider.value}/{cluster_name}[/][/]")
+    console.print(
+        f"[blue]Fetching outputs for: [bold]{provider.value}/{cluster_name}[/][/]"
+    )
 
     state_info = get_cluster_state_info(provider.value, cluster_name, state_dir)
     if not state_info["exists"] and not state_info["has_modules"]:
-        console.print(f"[yellow]No state found for cluster '{cluster_name}' ({provider.value})[/]")
+        console.print(
+            f"[yellow]No state found for cluster '{cluster_name}' ({provider.value})[/]"
+        )
         raise typer.Exit(code=1)
 
     work_dir = state_info["work_dir"]
@@ -410,8 +547,13 @@ def output(
 
 @app.command("list")
 def list_clusters(
-    state_dir: str = typer.Option(None, "--state-dir", "-s", envvar="NASIKO_STATE_DIR",
-                                   help="Path for storing Terraform state."),
+    state_dir: str = typer.Option(
+        None,
+        "--state-dir",
+        "-s",
+        envvar="NASIKO_STATE_DIR",
+        help="Path for storing Terraform state.",
+    ),
 ):
     """
     List all clusters managed by Nasiko CLI.
@@ -420,7 +562,9 @@ def list_clusters(
 
     if not clusters:
         console.print("[yellow]No managed clusters found.[/]")
-        console.print("[dim]Create a cluster with: nasiko setup k8s create <provider>[/]")
+        console.print(
+            "[dim]Create a cluster with: nasiko setup k8s create <provider>[/]"
+        )
         return
 
     console.print("[bold cyan]Managed Clusters:[/]\n")
@@ -444,9 +588,16 @@ def list_clusters(
 @app.command()
 def state_info(
     provider: Provider = typer.Argument(..., help="Cloud provider."),
-    cluster_name: str = typer.Option(DEFAULT_CLUSTER_NAME, "--name", "-n", help="Name of the cluster."),
-    state_dir: str = typer.Option(None, "--state-dir", "-s", envvar="NASIKO_STATE_DIR",
-                                   help="Path for storing Terraform state."),
+    cluster_name: str = typer.Option(
+        DEFAULT_CLUSTER_NAME, "--name", "-n", help="Name of the cluster."
+    ),
+    state_dir: str = typer.Option(
+        None,
+        "--state-dir",
+        "-s",
+        envvar="NASIKO_STATE_DIR",
+        help="Path for storing Terraform state.",
+    ),
 ):
     """
     Show detailed state information for a cluster.
@@ -456,10 +607,14 @@ def state_info(
     console.print(f"\n[bold cyan]State Info: {provider.value}/{cluster_name}[/]\n")
     console.print(f"  Working Directory: [cyan]{state_info_data['work_dir']}[/]")
     console.print(f"  Backend Type: [cyan]{state_info_data['backend_type']}[/]")
-    console.print(f"  Has Modules: {'[green]Yes[/]' if state_info_data['has_modules'] else '[yellow]No[/]'}")
-    console.print(f"  State Exists: {'[green]Yes[/]' if state_info_data['exists'] else '[yellow]No[/]'}")
+    console.print(
+        f"  Has Modules: {'[green]Yes[/]' if state_info_data['has_modules'] else '[yellow]No[/]'}"
+    )
+    console.print(
+        f"  State Exists: {'[green]Yes[/]' if state_info_data['exists'] else '[yellow]No[/]'}"
+    )
 
-    if state_info_data['state_file']:
+    if state_info_data["state_file"]:
         console.print(f"  State File: [cyan]{state_info_data['state_file']}[/]")
 
     print_state_info(provider.value, cluster_name)
@@ -467,8 +622,12 @@ def state_info(
 
 @app.command("init-modules")
 def init_modules(
-    source: str = typer.Option(None, "--source", "-s", help="Source directory containing terraform modules."),
-    force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing modules."),
+    source: str = typer.Option(
+        None, "--source", "-s", help="Source directory containing terraform modules."
+    ),
+    force: bool = typer.Option(
+        False, "--force", "-f", help="Overwrite existing modules."
+    ),
 ):
     """
     Initialize Terraform modules in ~/.nasiko/terraform/.
@@ -482,7 +641,6 @@ def init_modules(
     Example:
         nasiko setup k8s init-modules --source /path/to/terraform
     """
-    from .config import get_default_terraform_dir
 
     console.print("[cyan]Initializing Terraform modules...[/]\n")
 
@@ -490,16 +648,24 @@ def init_modules(
 
     # Verify setup
     aws_exists = (modules_dir / "aws" / "main.tf").exists()
-    do_exists = (modules_dir / "digitalocean" / "doks.tf").exists() or (modules_dir / "digitalocean" / "main.tf").exists()
+    do_exists = (modules_dir / "digitalocean" / "doks.tf").exists() or (
+        modules_dir / "digitalocean" / "main.tf"
+    ).exists()
 
-    console.print(f"\n[bold cyan]Module Status:[/]")
-    console.print(f"  AWS: {'[green]✓ Available[/]' if aws_exists else '[red]✗ Not found[/]'}")
-    console.print(f"  DigitalOcean: {'[green]✓ Available[/]' if do_exists else '[red]✗ Not found[/]'}")
+    console.print("\n[bold cyan]Module Status:[/]")
+    console.print(
+        f"  AWS: {'[green]✓ Available[/]' if aws_exists else '[red]✗ Not found[/]'}"
+    )
+    console.print(
+        f"  DigitalOcean: {'[green]✓ Available[/]' if do_exists else '[red]✗ Not found[/]'}"
+    )
     console.print(f"\n  Location: [cyan]{modules_dir}[/]")
 
     if not aws_exists or not do_exists:
         console.print("\n[yellow]Some modules are missing. Provide the source path:[/]")
-        console.print("[dim]  nasiko setup k8s init-modules --source /path/to/terraform[/]")
+        console.print(
+            "[dim]  nasiko setup k8s init-modules --source /path/to/terraform[/]"
+        )
 
 
 if __name__ == "__main__":

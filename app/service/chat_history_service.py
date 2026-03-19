@@ -1,5 +1,6 @@
 import uuid
 
+
 class ChatHistoryService:
     def __init__(
         self,
@@ -9,14 +10,16 @@ class ChatHistoryService:
         self.repository = repository
         self.logger = logger
 
-    async def create_session(self, user_id: str, agent_id: str | None = None, agent_url: str | None = None):
+    async def create_session(
+        self, user_id: str, agent_id: str | None = None, agent_url: str | None = None
+    ):
         log_parts = [f"Creating new session for user {user_id}"]
         if agent_id:
             log_parts.append(f"with agent_id: {agent_id}")
         if agent_url:
             log_parts.append(f"with agent_url: {agent_url}")
         self.logger.info(" ".join(log_parts))
-        
+
         session_id = uuid.uuid4().hex
         self.logger.debug(f"Created session: {session_id}")
         try:

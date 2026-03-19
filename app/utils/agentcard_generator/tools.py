@@ -159,7 +159,7 @@ class AgentAnalyzerTools:
                 return {
                     "status": "error",
                     "message": f"Syntax error parsing {file_path}: {str(e)}",
-                    "functions": []
+                    "functions": [],
                 }
 
             functions = []
@@ -169,13 +169,13 @@ class AgentAnalyzerTools:
                     # Skip private/dunder methods often not relevant for skills
                     if node.name.startswith("_"):
                         continue
-                        
+
                     # Extract parameters
                     param_list = []
                     for arg in node.args.args:
                         if arg.arg != "self":
                             param_list.append(arg.arg)
-                            
+
                     # Extract return type annotation
                     return_type = None
                     if node.returns:
@@ -186,7 +186,7 @@ class AgentAnalyzerTools:
                                 return_type = ast.unparse(node.returns)
                             else:
                                 # Fallback or just ignore complex types for now
-                                return_type = getattr(node.returns, "id", None) 
+                                return_type = getattr(node.returns, "id", None)
                         except:
                             pass
 
@@ -197,13 +197,15 @@ class AgentAnalyzerTools:
                         # use first line or summary
                         description = docstring.strip().split("\n")[0]
 
-                    functions.append({
-                        "name": node.name,
-                        "description": description,
-                        "parameters": param_list,
-                        "return_type": return_type,
-                        "line_number": node.lineno
-                    })
+                    functions.append(
+                        {
+                            "name": node.name,
+                            "description": description,
+                            "parameters": param_list,
+                            "return_type": return_type,
+                            "line_number": node.lineno,
+                        }
+                    )
 
             logger.info(f"Found {len(functions)} functions in {file_path}")
             return {
@@ -539,12 +541,12 @@ class AgentAnalyzerTools:
             visited_files = set()
             files_to_visit = [Path(file_path).resolve()]
             all_imports = set()
-            
+
             base_dir = Path(file_path).parent.resolve()
 
             while files_to_visit:
                 current_file = files_to_visit.pop(0)
-                
+
                 if current_file in visited_files:
                     continue
                 visited_files.add(current_file)
@@ -564,7 +566,7 @@ class AgentAnalyzerTools:
                 for node in ast.walk(tree):
                     if isinstance(node, ast.Import):
                         for alias in node.names:
-                            root_module = alias.name.split('.')[0].lower()
+                            root_module = alias.name.split(".")[0].lower()
                             all_imports.add(root_module)
                     elif isinstance(node, ast.ImportFrom):
                         if node.module:
@@ -573,90 +575,194 @@ class AgentAnalyzerTools:
                                 # Resolve relative import to file path
                                 # This is complex to do perfectly, so we'll do a best-effort
                                 # based on determining if it maps to a local file
-                                pass 
+                                pass
                             else:
-                                root_module = node.module.split('.')[0].lower()
+                                root_module = node.module.split(".")[0].lower()
                                 all_imports.add(root_module)
-                                
+
                                 # Check if this is a local module to visit
                                 # Heuristic: if module exists as .py file in same dir, visit it
                                 # This works for 'from api import ...' style
-                                module_path = base_dir / f"{node.module.replace('.', '/')}.py"
-                                if module_path.exists() and module_path not in visited_files:
+                                module_path = (
+                                    base_dir / f"{node.module.replace('.', '/')}.py"
+                                )
+                                if (
+                                    module_path.exists()
+                                    and module_path not in visited_files
+                                ):
                                     files_to_visit.append(module_path)
-                                    
+
                             # Also check explicitly if any imported names are modules themselves
                             # not entirely standard but covers some patterns
 
             evidence = []
             candidates = []
-            
+
             # Common standard library modules to filter out (not exhaustive but covers most)
             stdlib_modules = {
-                "os", "sys", "json", "logging", "asyncio", "typing", "datetime", "time", 
-                "pathlib", "re", "math", "random", "uuid", "abc", "argparse", "functools", 
-                "itertools", "collections", "copy", "threading", "subprocess", "warnings",
-                "io", "tempfile", "shutil", "glob", "gzip", "tarfile", "zipfile", "csv",
-                "unittest", "doctest", "pydoc", "inspect", "traceback", "pdb", "pickle",
-                "shelve", "dbm", "sqlite3", "zlib", "hashlib", "hmac", "secrets", 
-                "urllib", "http", "ftplib", "smtplib", "poplib", "imaplib", "nntplib",
-                "telnetlib", "xml", "html", "cgi", "socket", "ssl", "select", "selectors",
-                "asyncore", "asynchat", "signal", "mmap", "email", "json", "base64",
-                "binascii", "quopri", "contextlib", "dataclasses", "enum", "numbers",
-                "decimal", "fractions", "statistics", "textwrap", "string", "struct",
-                "codecs", "unicodedata"
+                "os",
+                "sys",
+                "json",
+                "logging",
+                "asyncio",
+                "typing",
+                "datetime",
+                "time",
+                "pathlib",
+                "re",
+                "math",
+                "random",
+                "uuid",
+                "abc",
+                "argparse",
+                "functools",
+                "itertools",
+                "collections",
+                "copy",
+                "threading",
+                "subprocess",
+                "warnings",
+                "io",
+                "tempfile",
+                "shutil",
+                "glob",
+                "gzip",
+                "tarfile",
+                "zipfile",
+                "csv",
+                "unittest",
+                "doctest",
+                "pydoc",
+                "inspect",
+                "traceback",
+                "pdb",
+                "pickle",
+                "shelve",
+                "dbm",
+                "sqlite3",
+                "zlib",
+                "hashlib",
+                "hmac",
+                "secrets",
+                "urllib",
+                "http",
+                "ftplib",
+                "smtplib",
+                "poplib",
+                "imaplib",
+                "nntplib",
+                "telnetlib",
+                "xml",
+                "html",
+                "cgi",
+                "socket",
+                "ssl",
+                "select",
+                "selectors",
+                "asyncore",
+                "asynchat",
+                "signal",
+                "mmap",
+                "email",
+                "json",
+                "base64",
+                "binascii",
+                "quopri",
+                "contextlib",
+                "dataclasses",
+                "enum",
+                "numbers",
+                "decimal",
+                "fractions",
+                "statistics",
+                "textwrap",
+                "string",
+                "struct",
+                "codecs",
+                "unicodedata",
             }
-            
-            non_stdlib_imports = [imp for imp in all_imports if imp not in stdlib_modules and not imp.startswith("_")]
+
+            non_stdlib_imports = [
+                imp
+                for imp in all_imports
+                if imp not in stdlib_modules and not imp.startswith("_")
+            ]
 
             # 1. Check for Orchestration Frameworks
             orchestration_frameworks = {
-                "crewai": "CrewAI", 
-                "langchain": "LangChain", 
-                "llama_index": "LlamaIndex", 
-                "autogen": "AutoGen", 
+                "crewai": "CrewAI",
+                "langchain": "LangChain",
+                "llama_index": "LlamaIndex",
+                "autogen": "AutoGen",
                 "phidata": "PhiData",
-                "semantic_kernel": "Semantic Kernel"
+                "semantic_kernel": "Semantic Kernel",
             }
-            
+
             for key, name in orchestration_frameworks.items():
                 # Check for exact match OR prefix match (e.g. langchain_openai, langchain_core)
-                if key in all_imports or any(imp.startswith(f"{key}") for imp in all_imports):
-                    candidates.append({"name": key, "type": "orchestration", "confidence": "high"})
-                    evidence.append(f"Found orchestration framework import: {key} (or submodule)")
-            
+                if key in all_imports or any(
+                    imp.startswith(f"{key}") for imp in all_imports
+                ):
+                    candidates.append(
+                        {"name": key, "type": "orchestration", "confidence": "high"}
+                    )
+                    evidence.append(
+                        f"Found orchestration framework import: {key} (or submodule)"
+                    )
+
             # 2. Check for Direct LLM SDKs
             llm_sdks = {
                 "openai": "OpenAI",
                 "anthropic": "Anthropic",
-                "google": "Google Generative AI", # google.generativeai
+                "google": "Google Generative AI",  # google.generativeai
                 "mistralai": "Mistral AI",
-                "cohere": "Cohere"
+                "cohere": "Cohere",
             }
-                
+
             for key, name in llm_sdks.items():
                 # Handle special case for google.generativeai
                 if key == "google":
                     if "google" in all_imports:
-                            candidates.append({"name": "google-generativeai", "type": "sdk", "confidence": "medium"})
-                            evidence.append(f"Found direct LLM SDK usage: {name}")
+                        candidates.append(
+                            {
+                                "name": "google-generativeai",
+                                "type": "sdk",
+                                "confidence": "medium",
+                            }
+                        )
+                        evidence.append(f"Found direct LLM SDK usage: {name}")
                 # Check for exact match OR prefix match
-                elif key in all_imports or any(imp.startswith(f"{key}") for imp in all_imports):
-                    candidates.append({"name": key, "type": "sdk", "confidence": "medium"})
+                elif key in all_imports or any(
+                    imp.startswith(f"{key}") for imp in all_imports
+                ):
+                    candidates.append(
+                        {"name": key, "type": "sdk", "confidence": "medium"}
+                    )
                     evidence.append(f"Found direct LLM SDK usage: {name}")
-            
+
             # 3. Check for Protocol Libraries (Information only)
-            protocol_libs = ["a2a", "a2a-sdk", "fastapi", "flask", "starlette", "uvicorn", "flet", "streamlit"]
+            protocol_libs = [
+                "a2a",
+                "a2a-sdk",
+                "fastapi",
+                "flask",
+                "starlette",
+                "uvicorn",
+                "flet",
+                "streamlit",
+            ]
             for lib in protocol_libs:
                 if lib in all_imports:
-                    evidence.append(f"Found protocol library (should NOT be agentFramework): {lib}")
+                    evidence.append(
+                        f"Found protocol library (should NOT be agentFramework): {lib}"
+                    )
 
             logger.info(f"Framework candidates: {candidates}")
             return {
                 "status": "success",
                 "candidates": candidates,
                 "all_imports": sorted(non_stdlib_imports),
-                "evidence": evidence
+                "evidence": evidence,
             }
 
         except Exception as e:
@@ -666,7 +772,7 @@ class AgentAnalyzerTools:
                 "message": str(e),
                 "candidates": [],
                 "all_imports": [],
-                "evidence": []
+                "evidence": [],
             }
 
     def generate_agentcard_json(

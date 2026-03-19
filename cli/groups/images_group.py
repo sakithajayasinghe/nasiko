@@ -18,6 +18,7 @@ console = Console()
 # Create images command group
 images_app = typer.Typer(help="Build and push Nasiko Docker images")
 
+
 @dataclass(frozen=True)
 class ImageSpec:
     dockerfile: str
@@ -29,7 +30,9 @@ class ImageSpec:
 # Aliases keep older docker-compose / docs names working without duplicating builds.
 SERVICES: dict[str, ImageSpec] = {
     "nasiko-backend": ImageSpec("core/app/Dockerfile", "core"),
-    "nasiko-router": ImageSpec("core/agent-gateway/router/Dockerfile", "core/agent-gateway/router"),
+    "nasiko-router": ImageSpec(
+        "core/agent-gateway/router/Dockerfile", "core/agent-gateway/router"
+    ),
     "nasiko-service-registry": ImageSpec(
         "core/agent-gateway/registry/Dockerfile",
         "core/agent-gateway/registry",
@@ -64,10 +67,14 @@ SERVICES: dict[str, ImageSpec] = {
 
 def _get_project_root() -> Path:
     """Get the repository root directory (parent of core/)."""
-    current = Path(__file__).parent.parent.parent.parent  # cli/groups/../../.. = repo root
+    current = Path(
+        __file__
+    ).parent.parent.parent.parent  # cli/groups/../../.. = repo root
     if (current / "core").is_dir() and (current / "web").is_dir():
         return current
-    raise FileNotFoundError("Could not find repository root (expected core/ and web/ directories)")
+    raise FileNotFoundError(
+        "Could not find repository root (expected core/ and web/ directories)"
+    )
 
 
 def _resolve_services(service_filter: Optional[List[str]]) -> Dict[str, ImageSpec]:
@@ -112,7 +119,7 @@ def _docker_login_if_needed(username: str) -> None:
         except (json.JSONDecodeError, OSError):
             pass
 
-    console.print(f"[yellow]Not logged into Docker Hub. Running docker login...[/]")
+    console.print("[yellow]Not logged into Docker Hub. Running docker login...[/]")
     result = subprocess.run(
         ["docker", "login", "-u", username],
         check=False,
@@ -154,7 +161,9 @@ def _ensure_buildx() -> str:
             raise typer.Exit(1)
 
     # Use the builder
-    subprocess.run(["docker", "buildx", "use", builder_name], check=False, capture_output=True)
+    subprocess.run(
+        ["docker", "buildx", "use", builder_name], check=False, capture_output=True
+    )
     return builder_name
 
 
@@ -192,9 +201,13 @@ def _build_images(
         # Use buildx for multi-platform or regular docker build for single platform
         if is_multiplatform:
             cmd = [
-                "docker", "buildx", "build",
-                "-f", str(dockerfile_path),
-                "--platform", platform,
+                "docker",
+                "buildx",
+                "build",
+                "-f",
+                str(dockerfile_path),
+                "--platform",
+                platform,
             ]
             for img in images:
                 cmd.extend(["-t", img])
@@ -204,13 +217,20 @@ def _build_images(
                 cmd.append("--push")
             else:
                 # For multi-platform without push, build and keep in cache
-                console.print(f"[yellow]Note: Multi-platform build will be cached locally but not loaded to docker images[/]")
-                console.print(f"[yellow]Use --push flag with build-push command to push to registry[/]")
+                console.print(
+                    "[yellow]Note: Multi-platform build will be cached locally but not loaded to docker images[/]"
+                )
+                console.print(
+                    "[yellow]Use --push flag with build-push command to push to registry[/]"
+                )
         else:
             cmd = [
-                "docker", "build",
-                "-f", str(dockerfile_path),
-                "--platform", platform,
+                "docker",
+                "build",
+                "-f",
+                str(dockerfile_path),
+                "--platform",
+                platform,
             ]
             for img in images:
                 cmd.extend(["-t", img])
@@ -276,11 +296,27 @@ def build_cmd(
         ),
     ] = "karannasiko",
     tag: Annotated[str, typer.Option("--tag", "-t", help="Image tag")] = "latest",
-    service: Annotated[Optional[List[str]], typer.Option("--service", "-s", help="Specific service(s) to build (repeatable)")] = None,
-    platform: Annotated[str, typer.Option("--platform", help="Target platform(s), comma-separated for multi-platform")] = "linux/amd64",
-    multi_platform: Annotated[bool, typer.Option("--multi-platform", help="Build for both amd64 and arm64")] = False,
-    no_cache: Annotated[bool, typer.Option("--no-cache", help="Build without Docker cache")] = False,
-    dry_run: Annotated[bool, typer.Option("--dry-run", help="Print commands without executing")] = False,
+    service: Annotated[
+        Optional[List[str]],
+        typer.Option(
+            "--service", "-s", help="Specific service(s) to build (repeatable)"
+        ),
+    ] = None,
+    platform: Annotated[
+        str,
+        typer.Option(
+            "--platform", help="Target platform(s), comma-separated for multi-platform"
+        ),
+    ] = "linux/amd64",
+    multi_platform: Annotated[
+        bool, typer.Option("--multi-platform", help="Build for both amd64 and arm64")
+    ] = False,
+    no_cache: Annotated[
+        bool, typer.Option("--no-cache", help="Build without Docker cache")
+    ] = False,
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Print commands without executing")
+    ] = False,
 ) -> None:
     """Build Docker images for Nasiko services."""
     services = _resolve_services(service)
@@ -289,7 +325,9 @@ def build_cmd(
     if multi_platform:
         platform = "linux/amd64,linux/arm64"
 
-    console.print(f"[bold]Building {len(services)} image(s) as {username}/<service>:{tag}[/]")
+    console.print(
+        f"[bold]Building {len(services)} image(s) as {username}/<service>:{tag}[/]"
+    )
     console.print(f"[bold]Target platform(s): {platform}[/]\n")
 
     if not dry_run:
@@ -304,7 +342,7 @@ def build_cmd(
         raise typer.Exit(1)
 
     if not dry_run:
-        console.print(f"\n[green]All images built successfully.[/]")
+        console.print("\n[green]All images built successfully.[/]")
 
 
 @images_app.command(name="push")
@@ -319,13 +357,22 @@ def push_cmd(
         ),
     ] = "karannasiko",
     tag: Annotated[str, typer.Option("--tag", "-t", help="Image tag")] = "latest",
-    service: Annotated[Optional[List[str]], typer.Option("--service", "-s", help="Specific service(s) to push (repeatable)")] = None,
-    dry_run: Annotated[bool, typer.Option("--dry-run", help="Print commands without executing")] = False,
+    service: Annotated[
+        Optional[List[str]],
+        typer.Option(
+            "--service", "-s", help="Specific service(s) to push (repeatable)"
+        ),
+    ] = None,
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Print commands without executing")
+    ] = False,
 ) -> None:
     """Push Docker images to the registry."""
     services = _resolve_services(service)
 
-    console.print(f"[bold]Pushing {len(services)} image(s) as {username}/<service>:{tag}[/]\n")
+    console.print(
+        f"[bold]Pushing {len(services)} image(s) as {username}/<service>:{tag}[/]\n"
+    )
 
     if not dry_run:
         _docker_login_if_needed(username)
@@ -335,7 +382,7 @@ def push_cmd(
         raise typer.Exit(1)
 
     if not dry_run:
-        console.print(f"\n[green]All images pushed successfully.[/]")
+        console.print("\n[green]All images pushed successfully.[/]")
 
 
 @images_app.command(name="build-push")
@@ -350,11 +397,25 @@ def build_push_cmd(
         ),
     ] = "karannasiko",
     tag: Annotated[str, typer.Option("--tag", "-t", help="Image tag")] = "latest",
-    service: Annotated[Optional[List[str]], typer.Option("--service", "-s", help="Specific service(s) (repeatable)")] = None,
-    platform: Annotated[str, typer.Option("--platform", help="Target platform(s), comma-separated for multi-platform")] = "linux/amd64",
-    multi_platform: Annotated[bool, typer.Option("--multi-platform", help="Build for both amd64 and arm64")] = False,
-    no_cache: Annotated[bool, typer.Option("--no-cache", help="Build without Docker cache")] = False,
-    dry_run: Annotated[bool, typer.Option("--dry-run", help="Print commands without executing")] = False,
+    service: Annotated[
+        Optional[List[str]],
+        typer.Option("--service", "-s", help="Specific service(s) (repeatable)"),
+    ] = None,
+    platform: Annotated[
+        str,
+        typer.Option(
+            "--platform", help="Target platform(s), comma-separated for multi-platform"
+        ),
+    ] = "linux/amd64",
+    multi_platform: Annotated[
+        bool, typer.Option("--multi-platform", help="Build for both amd64 and arm64")
+    ] = False,
+    no_cache: Annotated[
+        bool, typer.Option("--no-cache", help="Build without Docker cache")
+    ] = False,
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Print commands without executing")
+    ] = False,
 ) -> None:
     """Build and push Docker images for Nasiko services."""
     services = _resolve_services(service)
@@ -363,7 +424,9 @@ def build_push_cmd(
     if multi_platform:
         platform = "linux/amd64,linux/arm64"
 
-    console.print(f"[bold]Building and pushing {len(services)} image(s) as {username}/<service>:{tag}[/]")
+    console.print(
+        f"[bold]Building and pushing {len(services)} image(s) as {username}/<service>:{tag}[/]"
+    )
     console.print(f"[bold]Target platform(s): {platform}[/]\n")
 
     if not dry_run:
@@ -376,12 +439,16 @@ def build_push_cmd(
     # For multi-platform, buildx handles both build and push
     is_multiplatform = "," in platform
     if is_multiplatform:
-        ok = _build_images(username, tag, services, platform, no_cache, dry_run, push=True)
+        ok = _build_images(
+            username, tag, services, platform, no_cache, dry_run, push=True
+        )
         if not ok:
             raise typer.Exit(1)
     else:
         # For single platform, build then push separately
-        ok = _build_images(username, tag, services, platform, no_cache, dry_run, push=False)
+        ok = _build_images(
+            username, tag, services, platform, no_cache, dry_run, push=False
+        )
         if not ok:
             raise typer.Exit(1)
 
@@ -393,7 +460,7 @@ def build_push_cmd(
             raise typer.Exit(1)
 
     if not dry_run:
-        console.print(f"\n[green]All images built and pushed successfully.[/]")
+        console.print("\n[green]All images built and pushed successfully.[/]")
 
 
 @images_app.command(name="list")

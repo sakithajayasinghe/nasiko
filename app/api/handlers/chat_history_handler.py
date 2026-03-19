@@ -24,7 +24,10 @@ class ChatHistoryHandler(BaseHandler):
         self.chat_history_service = ChatHistoryService(service.repo, logger)
 
     async def create_session(
-        self, user_id: str, agent_id: Optional[str] = None, agent_url: Optional[str] = None
+        self,
+        user_id: str,
+        agent_id: Optional[str] = None,
+        agent_url: Optional[str] = None,
     ) -> SessionResponse | None:
         """Create a new session for user"""
         try:

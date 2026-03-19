@@ -11,6 +11,7 @@ from rich.console import Console
 app = typer.Typer(help="Setup Cloud Native Container Registry (ECR/DOCR)")
 console = Console()
 
+
 def _sanitize_do_token(token: Optional[str]) -> Optional[str]:
     t = (token or "").strip()
     if not t:
@@ -38,8 +39,11 @@ def _die_do_auth_hint():
         "[yellow]   Check that DIGITALOCEAN_ACCESS_TOKEN is a valid DigitalOcean API token "
         "(not expired/revoked), or authenticate doctl via `doctl auth init`, then re-run.[/]"
     )
-    console.print("[dim]   Tip: try `doctl account get` with the same token to validate it.[/]")
+    console.print(
+        "[dim]   Tip: try `doctl account get` with the same token to validate it.[/]"
+    )
     sys.exit(1)
+
 
 def _doctl_cmd(*args: str, token: Optional[str] = None) -> list[str]:
     """
@@ -85,12 +89,7 @@ def _normalize_digitalocean_token_env():
 def run_cmd(cmd_list, desc):
     """Runs a shell command and returns stdout."""
     try:
-        result = subprocess.run(
-            cmd_list, 
-            check=True, 
-            capture_output=True, 
-            text=True
-        )
+        result = subprocess.run(cmd_list, check=True, capture_output=True, text=True)
         return result.stdout.strip()
     except subprocess.CalledProcessError as e:
         console.print(f"[red]❌ Error during: {desc}[/]")
@@ -101,6 +100,7 @@ def run_cmd(cmd_list, desc):
         console.print(f"Please ensure {cmd_list[0]} is installed and in your PATH.")
         sys.exit(1)
 
+
 def setup_aws_ecr(region: str, repo_name: str):
     """
     Sets up AWS ECR.
@@ -109,25 +109,32 @@ def setup_aws_ecr(region: str, repo_name: str):
     3. Fetches temporary login password.
     """
     console.print(f"[cyan]Configuring AWS ECR for region: {region}...[/]")
-    
+
     # 1. Get Account ID
     identity_json = run_cmd(
-        ["aws", "sts", "get-caller-identity", "--output", "json"], 
-        "AWS Identity Check"
+        ["aws", "sts", "get-caller-identity", "--output", "json"], "AWS Identity Check"
     )
     account_id = json.loads(identity_json)["Account"]
     registry_url = f"{account_id}.dkr.ecr.{region}.amazonaws.com"
-    
+
     # 2. Ensure Repo Exists
     # We check if it exists, if not create it.
     try:
         run_cmd(
-            ["aws", "ecr", "describe-repositories", "--repository-names", repo_name, "--region", region],
-            "Check ECR Repo"
+            [
+                "aws",
+                "ecr",
+                "describe-repositories",
+                "--repository-names",
+                repo_name,
+                "--region",
+                region,
+            ],
+            "Check ECR Repo",
         )
         console.print(f"[green]✅ Repository '{repo_name}' already exists.[/]")
     except SystemExit:
-        # If describe fails (script exits), we actually want to catch that differently 
+        # If describe fails (script exits), we actually want to catch that differently
         # but run_cmd exits on error. Let's try creating directly.
         # Note: Ideally we change run_cmd to not exit, but for brevity:
         pass
@@ -136,19 +143,27 @@ def setup_aws_ecr(region: str, repo_name: str):
     # A safer quick check:
     console.print(f"[dim]Ensuring repository {repo_name} exists...[/]")
     subprocess.run(
-        ["aws", "ecr", "create-repository", "--repository-name", repo_name, "--region", region],
-        capture_output=True # Ignore output/error if it already exists
+        [
+            "aws",
+            "ecr",
+            "create-repository",
+            "--repository-name",
+            repo_name,
+            "--region",
+            region,
+        ],
+        capture_output=True,  # Ignore output/error if it already exists
     )
 
     # 3. Get Password
     # Note: This token expires in 12 hours. In production, use an ECR Helper or Operator.
     password = run_cmd(
         ["aws", "ecr", "get-login-password", "--region", region],
-        "Get ECR Login Password"
+        "Get ECR Login Password",
     )
 
     console.print("[yellow]⚠️  Note: AWS ECR tokens expire in 12 hours.[/]")
-    
+
     # Return format for Nasiko
     return registry_url, "AWS", password
 
@@ -163,18 +178,20 @@ def deploy_ecr_refresher(region: str, account_id: str, namespaces: list = None):
     # Ensure kubectl is available
     ensure_kubectl()
 
-    console.print(f"[bold magenta]🔄 Deploying ECR Token Refresher for namespaces: {namespaces}[/]")
+    console.print(
+        f"[bold magenta]🔄 Deploying ECR Token Refresher for namespaces: {namespaces}[/]"
+    )
 
     # We use the official AWS CLI image and install kubectl on the fly to keep it lightweight & secure.
     # Note: Using 'bitnami/kubectl' and installing aws-cli is also an option, but this way is cleaner for AWS auth.
     image = "amazon/aws-cli:latest"
-    
+
     # Logic:
     # 1. Get Token
     # 2. Delete old secret (if exists)
     # 3. Create new secret
     # We loop through all target namespaces.
-    
+
     script = textwrap.dedent(f"""
         curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
         chmod +x kubectl
@@ -227,7 +244,7 @@ roleRef:
 
     # 2. CronJob Manifest
     # Indent the script properly for YAML (14 spaces for content after '|')
-    indented_script = textwrap.indent(script, '              ')
+    indented_script = textwrap.indent(script, "              ")
 
     cron_manifest = f"""
 apiVersion: batch/v1
@@ -257,19 +274,41 @@ spec:
     # Apply Manifests
     try:
         # Apply RBAC
-        subprocess.run(["kubectl", "apply", "-f", "-"], input=rbac_manifest, text=True, check=True, stdout=subprocess.DEVNULL)
+        subprocess.run(
+            ["kubectl", "apply", "-f", "-"],
+            input=rbac_manifest,
+            text=True,
+            check=True,
+            stdout=subprocess.DEVNULL,
+        )
         # Apply CronJob
-        subprocess.run(["kubectl", "apply", "-f", "-"], input=cron_manifest, text=True, check=True, stdout=subprocess.DEVNULL)
-        
+        subprocess.run(
+            ["kubectl", "apply", "-f", "-"],
+            input=cron_manifest,
+            text=True,
+            check=True,
+            stdout=subprocess.DEVNULL,
+        )
+
         # Trigger the first job manually immediately so we don't have to wait 6 hours
         subprocess.run(
-            ["kubectl", "create", "job", "--from=cronjob/ecr-credential-refresher", "ecr-refresher-init", "-n", "default"],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            [
+                "kubectl",
+                "create",
+                "job",
+                "--from=cronjob/ecr-credential-refresher",
+                "ecr-refresher-init",
+                "-n",
+                "default",
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
         )
         console.print("[green]✅ ECR Refresher CronJob deployed & triggered![/]")
-        
+
     except subprocess.CalledProcessError as e:
         console.print(f"[red]❌ Failed to deploy ECR refresher: {e}[/]")
+
 
 def setup_do_registry(registry_name: str):
     """
@@ -305,7 +344,9 @@ def setup_do_registry(registry_name: str):
             if email:
                 console.print(f"[dim]Authenticated as DO user: {email}[/]")
         except (json.JSONDecodeError, KeyError, IndexError, TypeError):
-            console.print("[yellow]⚠️  Could not parse DO account details. Proceeding...[/]")
+            console.print(
+                "[yellow]⚠️  Could not parse DO account details. Proceeding...[/]"
+            )
     else:
         err = (account_check.stderr or "").strip()
         out = (account_check.stdout or "").strip()
@@ -321,7 +362,9 @@ def setup_do_registry(registry_name: str):
                 console.print(
                     "[yellow]⚠️  DIGITALOCEAN_ACCESS_TOKEN appears invalid/stale, but doctl is authenticated via context.[/]"
                 )
-                console.print("[dim]   Continuing using the current doctl context token.[/]")
+                console.print(
+                    "[dim]   Continuing using the current doctl context token.[/]"
+                )
                 doctl_token = None
                 account_check = ctx_check
             else:
@@ -330,9 +373,13 @@ def setup_do_registry(registry_name: str):
         if account_check.returncode != 0:
             msg = err or (out.splitlines()[0] if out else "")
             if msg:
-                console.print(f"[yellow]⚠️  Could not verify DO account details: {msg}[/]")
+                console.print(
+                    f"[yellow]⚠️  Could not verify DO account details: {msg}[/]"
+                )
             else:
-                console.print("[yellow]⚠️  Could not verify DO account details. Proceeding...[/]")
+                console.print(
+                    "[yellow]⚠️  Could not verify DO account details. Proceeding...[/]"
+                )
 
     console.print(f"[cyan]Configuring DigitalOcean Registry: {registry_name}...[/]")
 
@@ -345,7 +392,7 @@ def setup_do_registry(registry_name: str):
         _doctl_cmd("registry", "get", "--output", "json", token=doctl_token),
         _doctl_cmd("registry", "get", "--output", "json", token=doctl_token),
         capture_output=True,
-        text=True
+        text=True,
     )
     if check_result.returncode != 0:
         stderr = (check_result.stderr or "").strip()
@@ -371,18 +418,30 @@ def setup_do_registry(registry_name: str):
                 console.print(f"[green]✅ Using existing registry '{registry_name}'[/]")
                 registry_exists = True
             else:
-                console.print(f"[yellow]ℹ️  Found different registry '{actual_name}', but you requested '{registry_name}'[/]")
-                console.print(f"[yellow]   DigitalOcean allows only ONE registry per account.[/]")
-                console.print(f"[yellow]   To use your existing registry, specify: --cloud-reg-name {actual_name}[/]")
-                console.print(f"[yellow]   Or delete the existing registry first: doctl registry delete --force[/]")
+                console.print(
+                    f"[yellow]ℹ️  Found different registry '{actual_name}', but you requested '{registry_name}'[/]"
+                )
+                console.print(
+                    "[yellow]   DigitalOcean allows only ONE registry per account.[/]"
+                )
+                console.print(
+                    f"[yellow]   To use your existing registry, specify: --cloud-reg-name {actual_name}[/]"
+                )
+                console.print(
+                    "[yellow]   Or delete the existing registry first: doctl registry delete --force[/]"
+                )
                 sys.exit(1)
         except (json.JSONDecodeError, KeyError, IndexError) as e:
             console.print(f"[yellow]⚠️  Could not parse registry info: {e}[/]")
-            console.print(f"[dim]   Will attempt to create registry '{registry_name}'...[/]")
+            console.print(
+                f"[dim]   Will attempt to create registry '{registry_name}'...[/]"
+            )
 
     # If registry doesn't exist, try to create it
     if not registry_exists:
-        console.print(f"[dim]Registry '{registry_name}' not found, attempting to create it...[/]")
+        console.print(
+            f"[dim]Registry '{registry_name}' not found, attempting to create it...[/]"
+        )
 
         # Note: DigitalOcean registries are created globally but associated with a default region for data.
         # nyc3 is a safe default for DO registries.
@@ -408,42 +467,60 @@ def setup_do_registry(registry_name: str):
             token=doctl_token,
         )
 
-        create_result = subprocess.run(
-            create_cmd,
-            capture_output=True,
-            text=True
-        )
+        create_result = subprocess.run(create_cmd, capture_output=True, text=True)
 
         if create_result.returncode == 0:
             console.print(f"[green]✅ Created new registry '{registry_name}'[/]")
         else:
             # Handle creation failures
             err_msg = create_result.stderr.strip()
-            if _is_do_auth_error(err_msg) or _is_do_auth_error(create_result.stdout.strip()):
+            if _is_do_auth_error(err_msg) or _is_do_auth_error(
+                create_result.stdout.strip()
+            ):
                 _die_do_auth_hint()
-            if _is_do_auth_error(err_msg) or _is_do_auth_error(create_result.stdout.strip()):
+            if _is_do_auth_error(err_msg) or _is_do_auth_error(
+                create_result.stdout.strip()
+            ):
                 _die_do_auth_hint()
 
             # Check if registry already exists (409 conflict)
-            if "409" in err_msg or "already exists" in err_msg.lower() or "name already exists" in err_msg.lower():
-                console.print(f"[green]✅ Registry '{registry_name}' already exists, using it[/]")
+            if (
+                "409" in err_msg
+                or "already exists" in err_msg.lower()
+                or "name already exists" in err_msg.lower()
+            ):
+                console.print(
+                    f"[green]✅ Registry '{registry_name}' already exists, using it[/]"
+                )
                 # Continue execution - registry is available
             # Check for subscription plan error
             elif "invalid subscription plan" in err_msg.lower():
-                console.print(f"[red]❌ Failed to create registry '{registry_name}' due to subscription plan limits.[/]")
+                console.print(
+                    f"[red]❌ Failed to create registry '{registry_name}' due to subscription plan limits.[/]"
+                )
                 console.print(f"[yellow]   DigitalOcean error: {err_msg}[/]")
                 if actual_name:
-                    console.print(f"[cyan]   You have an existing registry: '{actual_name}'.[/]")
-                    console.print(f"[cyan]   If you just upgraded your plan, it might take a few minutes to sync.[/]")
+                    console.print(
+                        f"[cyan]   You have an existing registry: '{actual_name}'.[/]"
+                    )
+                    console.print(
+                        "[cyan]   If you just upgraded your plan, it might take a few minutes to sync.[/]"
+                    )
                 sys.exit(1)
             else:
                 # Real failure
-                console.print(f"[red]❌ Failed to create registry '{registry_name}'.[/]")
+                console.print(
+                    f"[red]❌ Failed to create registry '{registry_name}'.[/]"
+                )
                 console.print(f"[dim]{err_msg}[/]")
-                console.print(f"[yellow]   Hint: Registry names are global and must be unique across ALL DigitalOcean users.[/]")
-                console.print(f"[yellow]   Try a more unique name if '{registry_name}' is taken by another user.[/]")
+                console.print(
+                    "[yellow]   Hint: Registry names are global and must be unique across ALL DigitalOcean users.[/]"
+                )
+                console.print(
+                    f"[yellow]   Try a more unique name if '{registry_name}' is taken by another user.[/]"
+                )
                 sys.exit(1)
-            
+
     registry_url = f"registry.digitalocean.com/{registry_name}"
 
     # 2. Get Credentials
@@ -454,44 +531,67 @@ def setup_do_registry(registry_name: str):
                 *_doctl_cmd("registry", "docker-config", token=doctl_token),
                 *_doctl_cmd("registry", "docker-config", token=doctl_token),
                 "--read-write",
-                "--expiry-seconds", "31536000"  # 1 year
+                "--expiry-seconds",
+                "31536000",  # 1 year
             ],
-            "Get DO Docker Config (Read/Write)"
+            "Get DO Docker Config (Read/Write)",
         )
         docker_config = json.loads(docker_config_str)
-        
-        auth_entry = docker_config.get("auths", {}).get("registry.digitalocean.com", {}).get("auth")
-        
+
+        auth_entry = (
+            docker_config.get("auths", {})
+            .get("registry.digitalocean.com", {})
+            .get("auth")
+        )
+
         if not auth_entry:
             raise ValueError("Could not find 'auth' token in doctl output.")
 
         import base64
+
         decoded = base64.b64decode(auth_entry).decode("utf-8")
         username, password = decoded.split(":", 1)
 
     except (SystemExit, ValueError, json.JSONDecodeError) as e:
-        console.print(f"[yellow]⚠️  Could not parse credentials from 'doctl registry docker-config': {e}[/]")
+        console.print(
+            f"[yellow]⚠️  Could not parse credentials from 'doctl registry docker-config': {e}[/]"
+        )
         if doctl_token is None:
-            console.print("[red]❌ Cannot fall back to DIGITALOCEAN_ACCESS_TOKEN because it appears invalid/stale.[/]")
-            console.print("[dim]   Fix DIGITALOCEAN_ACCESS_TOKEN in your config, then re-run.[/]")
+            console.print(
+                "[red]❌ Cannot fall back to DIGITALOCEAN_ACCESS_TOKEN because it appears invalid/stale.[/]"
+            )
+            console.print(
+                "[dim]   Fix DIGITALOCEAN_ACCESS_TOKEN in your config, then re-run.[/]"
+            )
             sys.exit(1)
-        console.print("[yellow]   Falling back to using your configured DigitalOcean token directly.[/]")
+        console.print(
+            "[yellow]   Falling back to using your configured DigitalOcean token directly.[/]"
+        )
         if doctl_token is None:
-            console.print("[red]❌ Cannot fall back to DIGITALOCEAN_ACCESS_TOKEN because it appears invalid/stale.[/]")
-            console.print("[dim]   Fix DIGITALOCEAN_ACCESS_TOKEN in your config, then re-run.[/]")
+            console.print(
+                "[red]❌ Cannot fall back to DIGITALOCEAN_ACCESS_TOKEN because it appears invalid/stale.[/]"
+            )
+            console.print(
+                "[dim]   Fix DIGITALOCEAN_ACCESS_TOKEN in your config, then re-run.[/]"
+            )
             sys.exit(1)
-        console.print("[yellow]   Falling back to using your configured DigitalOcean token directly.[/]")
+        console.print(
+            "[yellow]   Falling back to using your configured DigitalOcean token directly.[/]"
+        )
         console.print("[dim]   Note: This token might have broad permissions.[/]")
         username = "access-token"
         password = token
 
     return registry_url, username, password
 
+
 @app.command()
 def deploy(
     provider: str = typer.Option(..., help="aws or digitalocean"),
     region: str = typer.Option(None, help="Region (Required for AWS)"),
-    name: str = typer.Option(..., help="Registry Name (ECR Repo name or DO Registry Name)")
+    name: str = typer.Option(
+        ..., help="Registry Name (ECR Repo name or DO Registry Name)"
+    ),
 ):
     """
     Configure Cloud Registry and return credentials (URL, User, Pass).
@@ -508,17 +608,19 @@ def deploy(
             console.print("[red]❌ Region is required for AWS.[/]")
             sys.exit(1)
         url, user, pwd = setup_aws_ecr(region, name)
-    
+
     elif provider == "digitalocean":
-        ensure_doctl()    # <--- Ensure tool exists
+        ensure_doctl()  # <--- Ensure tool exists
         url, user, pwd = setup_do_registry(name)
-    
+
     else:
         console.print(f"[red]❌ Unsupported provider: {provider}[/]")
         sys.exit(1)
 
     console.print(f"[green]✅ Cloud Registry Configured: {url}[/]")
     return url, user, pwd
+
+
 # ...
 if __name__ == "__main__":
     app()

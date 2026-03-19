@@ -42,7 +42,9 @@ class ComplianceToolset:
         try:
             # Set the document text in the parser
             self.agent.document_parser.document_text = document_text
-            logger.info(f"Checking compliance for document of length {len(document_text)}")
+            logger.info(
+                f"Checking compliance for document of length {len(document_text)}"
+            )
 
             # Get response from policy agent
             response = self.agent.get_response(query, session_id=self.session_id)

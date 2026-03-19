@@ -44,8 +44,9 @@ class AgentUploadTrackingService:
 
         # Create initial status record
         from datetime import datetime, timezone
+
         current_time = datetime.now(timezone.utc)
-        
+
         status_data = {
             "upload_id": upload_id,
             "agent_name": temp_agent_name,
@@ -60,7 +61,7 @@ class AgentUploadTrackingService:
             "status_message": "Upload initiated",
             "upload_type": "zip",
             "created_at": current_time,
-            "updated_at": current_time
+            "updated_at": current_time,
         }
 
         try:
@@ -81,12 +82,13 @@ class AgentUploadTrackingService:
 
             # Call the base service method
             result = await self.base_service.process_zip_upload(file, agent_name)
-            
+
             # If successful, trigger orchestration with owner_id
             if result.success:
                 from app.service.orchestration_service import OrchestrationService
+
                 orchestration = OrchestrationService(self.logger)
-                
+
                 # Agents are stored versioned under /app/agents/{name}/{version} (e.g. v1.0.0).
                 # If we orchestrate the unversioned dir, the BuildKit job downloads a tarball
                 # that contains only the version subdir and no root-level Dockerfile.
@@ -94,18 +96,20 @@ class AgentUploadTrackingService:
                 if getattr(result, "version", None):
                     agent_path = f"/app/agents/{result.agent_name}/{result.version}"
 
-                orchestration_triggered = await orchestration.trigger_agent_orchestration(
-                    agent_name=result.agent_name,
-                    agent_path=agent_path,
-                    base_url=settings.NASIKO_API_URL,
-                    additional_data={
-                        "owner_id": user_id,
-                        "upload_id": upload_id,
-                        "upload_type": "zip",
-                        "version": getattr(result, "version", None),
-                    }
+                orchestration_triggered = (
+                    await orchestration.trigger_agent_orchestration(
+                        agent_name=result.agent_name,
+                        agent_path=agent_path,
+                        base_url=settings.NASIKO_API_URL,
+                        additional_data={
+                            "owner_id": user_id,
+                            "upload_id": upload_id,
+                            "upload_type": "zip",
+                            "version": getattr(result, "version", None),
+                        },
+                    )
                 )
-                
+
                 # Update the result to reflect our orchestration call
                 result.orchestration_triggered = orchestration_triggered
 
@@ -185,12 +189,12 @@ class AgentUploadTrackingService:
             )
 
     async def process_github_upload(
-        self, 
-        directory_path: str, 
-        user_id: str, 
+        self,
+        directory_path: str,
+        user_id: str,
         agent_name: str | None = None,
         repository_full_name: str | None = None,
-        branch: str | None = None
+        branch: str | None = None,
     ) -> AgentUploadResult:
         """
         Process GitHub repository upload with comprehensive status tracking
@@ -204,8 +208,9 @@ class AgentUploadTrackingService:
 
         # Create initial status record
         from datetime import datetime, timezone
+
         current_time = datetime.now(timezone.utc)
-        
+
         status_data = {
             "upload_id": upload_id,
             "agent_name": temp_agent_name,
@@ -216,13 +221,13 @@ class AgentUploadTrackingService:
                 "directory_path": directory_path,
                 "repository_full_name": repository_full_name,
                 "branch": branch,
-                "source_type": "github"
+                "source_type": "github",
             },
             "file_size": directory_size,
             "status_message": "GitHub repository upload initiated",
             "upload_type": "github",
             "created_at": current_time,
-            "updated_at": current_time
+            "updated_at": current_time,
         }
 
         try:
@@ -259,26 +264,28 @@ class AgentUploadTrackingService:
                     },
                 )
 
-
                 from app.service.orchestration_service import OrchestrationService
+
                 orchestration = OrchestrationService(self.logger)
 
                 agent_path = f"/app/agents/{result.agent_name}"
                 if getattr(result, "version", None):
                     agent_path = f"/app/agents/{result.agent_name}/{result.version}"
 
-                orchestration_triggered = await orchestration.trigger_agent_orchestration(
-                    agent_name=result.agent_name,
-                    agent_path=agent_path,
-                    base_url=settings.NASIKO_API_URL,
-                    additional_data={
-                        "owner_id": user_id,
-                        "upload_id": upload_id,
-                        "upload_type": "github",
-                        "repository_full_name": repository_full_name,
-                        "branch": branch,
-                        "version": getattr(result, "version", None),
-                    }
+                orchestration_triggered = (
+                    await orchestration.trigger_agent_orchestration(
+                        agent_name=result.agent_name,
+                        agent_path=agent_path,
+                        base_url=settings.NASIKO_API_URL,
+                        additional_data={
+                            "owner_id": user_id,
+                            "upload_id": upload_id,
+                            "upload_type": "github",
+                            "repository_full_name": repository_full_name,
+                            "branch": branch,
+                            "version": getattr(result, "version", None),
+                        },
+                    )
                 )
 
                 # Update the result to reflect our orchestration call
@@ -303,7 +310,9 @@ class AgentUploadTrackingService:
                     )
 
                 processing_time = time.time() - start_time
-                self.logger.info(f"GitHub upload processing completed in {processing_time:.2f} seconds")
+                self.logger.info(
+                    f"GitHub upload processing completed in {processing_time:.2f} seconds"
+                )
                 return result
 
             else:
@@ -345,8 +354,9 @@ class AgentUploadTrackingService:
 
         # Create initial status record
         from datetime import datetime, timezone
+
         current_time = datetime.now(timezone.utc)
-        
+
         status_data = {
             "upload_id": upload_id,
             "agent_name": temp_agent_name,
@@ -360,7 +370,7 @@ class AgentUploadTrackingService:
             "status_message": "Directory upload initiated",
             "upload_type": "directory",
             "created_at": current_time,
-            "updated_at": current_time
+            "updated_at": current_time,
         }
 
         try:
@@ -383,28 +393,31 @@ class AgentUploadTrackingService:
             result = await self.base_service.process_directory_upload(
                 directory_path, agent_name
             )
-            
+
             # If successful, trigger orchestration with owner_id
             if result.success:
                 from app.service.orchestration_service import OrchestrationService
+
                 orchestration = OrchestrationService(self.logger)
-                
+
                 agent_path = f"/app/agents/{result.agent_name}"
                 if getattr(result, "version", None):
                     agent_path = f"/app/agents/{result.agent_name}/{result.version}"
 
-                orchestration_triggered = await orchestration.trigger_agent_orchestration(
-                    agent_name=result.agent_name,
-                    agent_path=agent_path,
-                    base_url=settings.NASIKO_API_URL,
-                    additional_data={
-                        "owner_id": user_id,
-                        "upload_id": upload_id,
-                        "upload_type": "directory",
-                        "version": getattr(result, "version", None),
-                    }
+                orchestration_triggered = (
+                    await orchestration.trigger_agent_orchestration(
+                        agent_name=result.agent_name,
+                        agent_path=agent_path,
+                        base_url=settings.NASIKO_API_URL,
+                        additional_data={
+                            "owner_id": user_id,
+                            "upload_id": upload_id,
+                            "upload_type": "directory",
+                            "version": getattr(result, "version", None),
+                        },
+                    )
                 )
-                
+
                 # Update the result to reflect our orchestration call
                 result.orchestration_triggered = orchestration_triggered
 
@@ -517,11 +530,17 @@ class AgentUploadTrackingService:
         """
         try:
             if self.repository:
-                upload_data = await self.repository.update_upload_status_by_agent_name(agent_name, update_data)
-                self.logger.info(f"Updated latest upload status for agent: {agent_name}")
+                upload_data = await self.repository.update_upload_status_by_agent_name(
+                    agent_name, update_data
+                )
+                self.logger.info(
+                    f"Updated latest upload status for agent: {agent_name}"
+                )
                 return upload_data
             else:
                 self.logger.warning("Repository not available for upload status update")
         except Exception as e:
-            self.logger.error(f"Failed to update latest upload status for agent {agent_name}: {str(e)}")
+            self.logger.error(
+                f"Failed to update latest upload status for agent {agent_name}: {str(e)}"
+            )
             raise

@@ -24,7 +24,7 @@ def create_router(handlers: HandlerFactory, logger) -> APIRouter:
     Create the main API router by combining all feature-specific routes
     """
     router = APIRouter()
-    
+
     # Include organized routes
     router.include_router(create_health_routes(handlers))
     router.include_router(create_registry_routes(handlers))
@@ -38,5 +38,5 @@ def create_router(handlers: HandlerFactory, logger) -> APIRouter:
     router.include_router(create_chat_history_routes(handlers))
     router.include_router(create_observability_routes(handlers))
     router.include_router(create_nanda_routes(handlers))
-    
+
     return router

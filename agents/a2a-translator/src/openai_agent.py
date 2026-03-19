@@ -7,8 +7,8 @@ def create_agent():
     tools = toolset.get_tools()
 
     return {
-        'tools': tools,
-        'system_prompt': """You are a Translation agent that can help users translate text and web content between different languages.
+        "tools": tools,
+        "system_prompt": """You are a Translation agent that can help users translate text and web content between different languages.
 
 Users will request help with:
 - Translating plain text from one language to another

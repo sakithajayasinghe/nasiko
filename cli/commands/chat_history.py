@@ -20,21 +20,23 @@ def create_session(agent_name: Optional[str] = None):
 
     try:
         client = get_api_client()
-        
+
         # Send agent_name wrapped in proper request body structure
         if agent_name:
-            response = client.post(APIEndpoints.CHAT_SESSION, data={"agent_id": agent_name})
+            response = client.post(
+                APIEndpoints.CHAT_SESSION, data={"agent_id": agent_name}
+            )
         else:
             response = client.post(APIEndpoints.CHAT_SESSION, data={})
-        
+
         result = client.handle_response(response)
         if result is None:
             raise typer.Exit(1)
-            
+
         data = result.get("data", result)
 
         session_id = data.get("session_id")
-        console.print(f"[green]✅ Session created successfully[/green]")
+        console.print("[green]✅ Session created successfully[/green]")
         console.print(f"[cyan]Session ID: {session_id}[/cyan]")
         if data.get("created_at"):
             console.print(f"[cyan]Created: {data['created_at']}[/cyan]")
@@ -48,7 +50,9 @@ def create_session(agent_name: Optional[str] = None):
         raise typer.Exit(1)
 
 
-def list_sessions(limit: int = 10, cursor: Optional[str] = None, direction: str = "after"):
+def list_sessions(
+    limit: int = 10, cursor: Optional[str] = None, direction: str = "after"
+):
     """Get paginated list of chat sessions."""
 
     try:
@@ -61,11 +65,13 @@ def list_sessions(limit: int = 10, cursor: Optional[str] = None, direction: str 
         result = client.handle_response(response)
         if result is None:
             raise typer.Exit(1)
-            
+
         data = result.get("data", result)
 
         if data:
-            console.print(f"[bold magenta]Chat Sessions ({len(data)} found)[/bold magenta]\n")
+            console.print(
+                f"[bold magenta]Chat Sessions ({len(data)} found)[/bold magenta]\n"
+            )
 
             table = Table(show_header=True, header_style="bold magenta")
             table.add_column("Session ID", style="cyan", width=40)
@@ -95,7 +101,10 @@ def list_sessions(limit: int = 10, cursor: Optional[str] = None, direction: str 
 
 
 def get_chat_history(
-    session_id: str, limit: int = 50, cursor: Optional[str] = None, direction: str = "after"
+    session_id: str,
+    limit: int = 50,
+    cursor: Optional[str] = None,
+    direction: str = "after",
 ):
     """Get chat history for a specific session."""
 
@@ -110,11 +119,13 @@ def get_chat_history(
         result = client.handle_response(response)
         if result is None:
             raise typer.Exit(1)
-            
+
         data = result.get("data", result)
 
         if data:
-            console.print(f"[bold magenta]Chat History - Session {session_id}[/bold magenta]")
+            console.print(
+                f"[bold magenta]Chat History - Session {session_id}[/bold magenta]"
+            )
             console.print(f"[cyan]({len(data)} messages)[/cyan]\n")
 
             for msg in data:
@@ -130,7 +141,9 @@ def get_chat_history(
                 else:
                     role_color = "yellow"
 
-                msg_text = f"[bold {role_color}][{timestamp}] {role}:[/bold {role_color}]\n"
+                msg_text = (
+                    f"[bold {role_color}][{timestamp}] {role}:[/bold {role_color}]\n"
+                )
 
                 # # Truncate long messages
                 # if len(content) > 200:
@@ -158,7 +171,9 @@ def get_chat_history(
 def delete_session(session_id: str):
     """Delete a chat session."""
 
-    console.print(f"[yellow]Are you sure you want to delete session '{session_id}'?[/yellow]")
+    console.print(
+        f"[yellow]Are you sure you want to delete session '{session_id}'?[/yellow]"
+    )
     console.print("[yellow]This action cannot be undone.[/yellow]")
 
     confirm = typer.confirm("Continue with deletion?")
@@ -170,7 +185,9 @@ def delete_session(session_id: str):
         client = get_api_client()
         url = APIEndpoints.CHAT_SESSION_BY_ID.format(session_id=session_id)
         response = client.delete(url)
-        result = client.handle_response(response, success_message=f"Successfully deleted session: {session_id}")
+        result = client.handle_response(
+            response, success_message=f"Successfully deleted session: {session_id}"
+        )
         if result is None:
             raise typer.Exit(1)
 
