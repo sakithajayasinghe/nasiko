@@ -28,8 +28,8 @@ logging.basicConfig()
 
 
 @click.command()
-@click.option('--host', 'host', default='localhost')
-@click.option('--port', 'port', default=10007)
+@click.option("--host", "host", default="localhost")
+@click.option("--port", "port", default=10007)
 def main(host: str, port: int):
     # Determine which LLM provider to use
     api_key = os.getenv('OPENAI_API_KEY') or os.getenv('MINIMAX_API_KEY')
@@ -46,25 +46,25 @@ def main(host: str, port: int):
         )
 
     skill = AgentSkill(
-        id='github_repositories',
-        name='GitHub Repositories',
-        description='Query GitHub repositories, recent updates, commits, and project activity',
-        tags=['github', 'repositories', 'commits'],
+        id="github_repositories",
+        name="GitHub Repositories",
+        description="Query GitHub repositories, recent updates, commits, and project activity",
+        tags=["github", "repositories", "commits"],
         examples=[
-            'Show my recent repository updates',
-            'What are the latest commits in my project?',
-            'Search for popular Python repositories with recent activity',
+            "Show my recent repository updates",
+            "What are the latest commits in my project?",
+            "Search for popular Python repositories with recent activity",
         ],
     )
 
     # AgentCard for OpenAI-based agent
     agent_card = AgentCard(
-        name='GitHub Agent',
-        description='An agent that can query GitHub repositories and recent project updates',
-        url=f'http://{host}:{port}/',
-        version='1.0.0',
-        default_input_modes=['text'],
-        default_output_modes=['text'],
+        name="GitHub Agent",
+        description="An agent that can query GitHub repositories and recent project updates",
+        url=f"http://{host}:{port}/",
+        version="1.0.0",
+        default_input_modes=["text"],
+        default_output_modes=["text"],
         capabilities=AgentCapabilities(streaming=True),
         skills=[skill],
     )
@@ -95,5 +95,5 @@ def main(host: str, port: int):
     uvicorn.run(app, host=host, port=port)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

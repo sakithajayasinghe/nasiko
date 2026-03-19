@@ -13,6 +13,7 @@ github_app = typer.Typer(help="GitHub integration and repository management")
 def github_login():
     """Authenticate with GitHub via the Nasiko backend automatically."""
     from commands.github import login_command
+
     login_command()
 
 
@@ -20,6 +21,7 @@ def github_login():
 def github_logout():
     """Logout from GitHub and clear authentication session."""
     from commands.github import logout_command
+
     logout_command()
 
 
@@ -27,6 +29,7 @@ def github_logout():
 def list_github_repos():
     """List your accessible GitHub repositories."""
     from commands.github import list_repos_command
+
     list_repos_command()
 
 
@@ -34,6 +37,7 @@ def list_github_repos():
 def github_status():
     """Get github status"""
     from commands.github import get_github_status
+
     get_github_status()
 
 
@@ -49,4 +53,5 @@ def github_clone(
 ):
     """Clone a GitHub repository and upload it as an agent. If no repo specified, select from a list."""
     from commands.github import clone_command
+
     clone_command(repo, branch)

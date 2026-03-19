@@ -10,10 +10,12 @@ from ..types import (
     RegistryCreateRequest,
     RegistrySingleResponse,
     SimpleUserAgentsResponse,
-    UserAgentsResponse, RegistryUpsertRequest,
+    UserAgentsResponse,
+    RegistryUpsertRequest,
     VersionStatusUpdateRequest,
     VersionStatusUpdateResponse,
 )
+
 
 def create_registry_routes(handlers: HandlerFactory) -> APIRouter:
     """Create registry-related routes"""
@@ -81,8 +83,8 @@ def create_registry_routes(handlers: HandlerFactory) -> APIRouter:
         description="Create or update a registry entry by name",
     )
     async def upsert_registry_by_name(
-            upsert_data: RegistryUpsertRequest,
-            agent_name: str = Path(..., description="Registry name"),
+        upsert_data: RegistryUpsertRequest,
+        agent_name: str = Path(..., description="Registry name"),
     ):
         return await handlers.registry.upsert_registry_by_name(agent_name, upsert_data)
 
@@ -93,7 +95,7 @@ def create_registry_routes(handlers: HandlerFactory) -> APIRouter:
     )
     async def delete_agent_completely(
         agent_id: str = Path(..., description="Agent ID to delete"),
-        user_id: str = Depends(get_user_id_from_token)
+        user_id: str = Depends(get_user_id_from_token),
     ):
         return await handlers.registry.delete_agent_completely(agent_id, user_id)
 
@@ -101,12 +103,14 @@ def create_registry_routes(handlers: HandlerFactory) -> APIRouter:
         "/agent/{agent_name}/version/status",
         response_model=VersionStatusUpdateResponse,
         summary="Update Agent Version Status",
-        description="Update the status of an agent version (e.g., from 'building' to 'active')"
+        description="Update the status of an agent version (e.g., from 'building' to 'active')",
     )
     async def update_agent_version_status(
         status_update: VersionStatusUpdateRequest,
-        agent_name: str = Path(..., description="Agent name")
+        agent_name: str = Path(..., description="Agent name"),
     ):
-        return await handlers.registry.update_agent_version_status(agent_name, status_update)
+        return await handlers.registry.update_agent_version_status(
+            agent_name, status_update
+        )
 
     return router

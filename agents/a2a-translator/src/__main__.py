@@ -19,15 +19,14 @@ from openai_agent_executor import (
 )
 from starlette.applications import Starlette
 
-
 load_dotenv()
 
 logging.basicConfig()
 
 
 @click.command()
-@click.option('--host', 'host', default='localhost')
-@click.option('--port', 'port', default=5000)
+@click.option("--host", "host", default="localhost")
+@click.option("--port", "port", default=5000)
 def main(host: str, port: int):
     # Determine which LLM provider to use
     api_key = os.getenv('OPENAI_API_KEY') or os.getenv('MINIMAX_API_KEY')
@@ -44,26 +43,26 @@ def main(host: str, port: int):
         )
 
     skill = AgentSkill(
-        id='translator_agent',
-        name='Translator Agent',
-        description='Translate text and web content between different languages',
-        tags=['translation', 'language', 'text', 'url'],
+        id="translator_agent",
+        name="Translator Agent",
+        description="Translate text and web content between different languages",
+        tags=["translation", "language", "text", "url"],
         examples=[
             'Translate "Hello world" to Spanish',
-            'What does this French website say in English?',
-            'Detect the language of this text',
-            'Translate the content of this webpage to German',
+            "What does this French website say in English?",
+            "Detect the language of this text",
+            "Translate the content of this webpage to German",
         ],
     )
 
     # AgentCard for OpenAI-based agent
     agent_card = AgentCard(
-        name='Translator Agent',
-        description='An agent that can translate text and web content between different languages',
-        url=f'http://{host}:{port}/',
-        version='1.0.0',
-        default_input_modes=['text'],
-        default_output_modes=['text'],
+        name="Translator Agent",
+        description="An agent that can translate text and web content between different languages",
+        url=f"http://{host}:{port}/",
+        version="1.0.0",
+        default_input_modes=["text"],
+        default_output_modes=["text"],
         capabilities=AgentCapabilities(streaming=True),
         skills=[skill],
     )
@@ -94,5 +93,5 @@ def main(host: str, port: int):
     uvicorn.run(app, host=host, port=port)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

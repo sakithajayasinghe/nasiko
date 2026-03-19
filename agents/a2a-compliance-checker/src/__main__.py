@@ -18,9 +18,7 @@ from openai_agent_executor import (
     OpenAIAgentExecutor,  # type: ignore[import-untyped]
 )
 from starlette.applications import Starlette
-from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
-
 
 load_dotenv()
 
@@ -28,10 +26,10 @@ logging.basicConfig()
 
 
 @click.command()
-@click.option('--host', 'host', default='localhost')
-@click.option('--port', 'port', default=10008)
-@click.option('--mongo-url', 'mongo_url', default='mongodb://localhost:27017')
-@click.option('--db-name', 'db_name', default='compliance-checker-a2a')
+@click.option("--host", "host", default="localhost")
+@click.option("--port", "port", default=10008)
+@click.option("--mongo-url", "mongo_url", default="mongodb://localhost:27017")
+@click.option("--db-name", "db_name", default="compliance-checker-a2a")
 def main(host: str, port: int, mongo_url: str, db_name: str):
     # Determine which LLM provider to use
     api_key = os.getenv('OPENAI_API_KEY') or os.getenv('MINIMAX_API_KEY')
@@ -48,26 +46,26 @@ def main(host: str, port: int, mongo_url: str, db_name: str):
         )
 
     skill = AgentSkill(
-        id='compliance_checking',
-        name='Compliance Checking',
-        description='Analyze documents for policy violations and compliance issues',
-        tags=['compliance', 'policy', 'document-analysis', 'regulations'],
+        id="compliance_checking",
+        name="Compliance Checking",
+        description="Analyze documents for policy violations and compliance issues",
+        tags=["compliance", "policy", "document-analysis", "regulations"],
         examples=[
-            'Check this document for policy compliance',
-            'Does this email violate any policies?',
-            'Analyze this expense report for compliance issues',
-            'What are the encryption requirements for file transfers?',
+            "Check this document for policy compliance",
+            "Does this email violate any policies?",
+            "Analyze this expense report for compliance issues",
+            "What are the encryption requirements for file transfers?",
         ],
     )
 
     # AgentCard for OpenAI-based agent
     agent_card = AgentCard(
-        name='Compliance Checker Agent',
-        description='An agent that analyzes documents for policy violations and compliance issues',
-        url=f'http://{host}:{port}/',
-        version='1.0.0',
-        default_input_modes=['text'],
-        default_output_modes=['text'],
+        name="Compliance Checker Agent",
+        description="An agent that analyzes documents for policy violations and compliance issues",
+        url=f"http://{host}:{port}/",
+        version="1.0.0",
+        default_input_modes=["text"],
+        default_output_modes=["text"],
         capabilities=AgentCapabilities(streaming=True),
         skills=[skill],
     )
@@ -94,15 +92,15 @@ def main(host: str, port: int, mongo_url: str, db_name: str):
     routes = a2a_app.routes()
 
     app = Starlette(routes=routes)
-    
+
     # Add CORS middleware
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[
             "http://localhost:4000",
-            "http://127.0.0.1:4000", 
+            "http://127.0.0.1:4000",
             "http://localhost:3000",
-            "http://127.0.0.1:3000"
+            "http://127.0.0.1:3000",
         ],
         allow_credentials=True,
         allow_methods=["*"],
@@ -112,5 +110,5 @@ def main(host: str, port: int, mongo_url: str, db_name: str):
     uvicorn.run(app, host=host, port=port)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

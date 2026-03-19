@@ -5,16 +5,16 @@ Handles injection of LangTrace configuration into agent code.
 
 import logging
 import os
-from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
 class InstrumentationInjector:
     """Handles LangTrace instrumentation injection"""
-    
+
     def __init__(self):
         self.langtrace_config_template = self._get_langtrace_config_template()
-    
+
     def inject_langtrace_config(self, agent_temp_path, agent_name):
         """Create langtrace_config.py file and inject import at top of main.py"""
         if os.getenv("LANGTRACE_ENABLED", "false").lower() not in ("1", "true", "yes"):
@@ -27,53 +27,59 @@ class InstrumentationInjector:
             agent_temp_path / "__main__.py",
             agent_temp_path / "src" / "__main__.py",
         ]
-        
+
         main_py_path = None
         config_dir = None
-        
+
         for path in main_py_paths:
             if path.exists():
                 main_py_path = path
                 config_dir = path.parent
                 break
-        
+
         if not main_py_path:
-            logger.warning(f"No main.py found for {agent_name}, skipping Langtrace injection...")
+            logger.warning(
+                f"No main.py found for {agent_name}, skipping Langtrace injection..."
+            )
             return False
-        
+
         # Create langtrace_config.py in the same directory as main.py
         config_file_path = config_dir / "langtrace_config.py"
         config_file_path.write_text(self.langtrace_config_template)
         logger.info(f"Created langtrace_config.py for {agent_name}")
-        
+
         # Read current main.py content
         original_content = main_py_path.read_text()
-        
+
         # Check if langtrace_config is already imported
         if "import langtrace_config" in original_content:
-            logger.info(f"Langtrace config already imported in {agent_name} main.py, skipping injection...")
+            logger.info(
+                f"Langtrace config already imported in {agent_name} main.py, skipping injection..."
+            )
             return True
-        
+
         # Find the right place to inject - after existing imports but before other code
-        lines = original_content.split('\n')
-        
+        lines = original_content.split("\n")
+
         # Find the best insertion point (enhanced for A2A agents)
         insert_index = 0
         found_imports = False
-        
+
         for i, line in enumerate(lines):
             stripped_line = line.strip()
-            
+
             # Skip shebang line for A2A agents
-            if stripped_line.startswith('#!'):
+            if stripped_line.startswith("#!"):
                 insert_index = i + 1
                 continue
-            
+
             # Skip encoding declarations
-            if stripped_line.startswith('# -*- coding:') or stripped_line.startswith('# coding:'):
+            if stripped_line.startswith("# -*- coding:") or stripped_line.startswith(
+                "# coding:"
+            ):
                 insert_index = i + 1
                 continue
-                
+
             # Skip module docstrings
             if stripped_line.startswith('"""') or stripped_line.startswith("'''"):
                 # Find the end of docstring
@@ -87,24 +93,33 @@ class InstrumentationInjector:
                             insert_index = j + 1
                             break
                     continue
-            
+
             # Track imports and continue after them (handle multi-line imports)
-            if (stripped_line.startswith('import ') or 
-                stripped_line.startswith('from ') or
-                stripped_line.startswith('__') and stripped_line.endswith('__')):  # __future__ imports etc
+            if (
+                stripped_line.startswith("import ")
+                or stripped_line.startswith("from ")
+                or stripped_line.startswith("__")
+                and stripped_line.endswith("__")
+            ):  # __future__ imports etc
                 found_imports = True
-                
+
                 # For multi-line imports, find the end of the import statement
-                if ('(' in stripped_line and ')' not in stripped_line) or stripped_line.endswith('\\'):
+                if (
+                    "(" in stripped_line and ")" not in stripped_line
+                ) or stripped_line.endswith("\\"):
                     # This is a multi-line import, find where it ends
                     for j in range(i + 1, len(lines)):
                         next_line = lines[j].strip()
                         # For parentheses style: look for closing )
-                        if '(' in stripped_line and ')' in next_line:
+                        if "(" in stripped_line and ")" in next_line:
                             insert_index = j + 1
                             break
                         # For backslash style: look for line not ending with \
-                        elif stripped_line.endswith('\\') and not next_line.endswith('\\') and next_line:
+                        elif (
+                            stripped_line.endswith("\\")
+                            and not next_line.endswith("\\")
+                            and next_line
+                        ):
                             insert_index = j + 1
                             break
                     continue
@@ -112,28 +127,30 @@ class InstrumentationInjector:
                     # Single line import
                     insert_index = i + 1
                     continue
-            
+
             # Skip comments and empty lines after imports
-            if (stripped_line.startswith('#') or stripped_line == ''):
+            if stripped_line.startswith("#") or stripped_line == "":
                 if found_imports:  # Only advance if we've seen imports
                     insert_index = i + 1
                 continue
-                
+
             # First non-import, non-comment, non-empty line
             if stripped_line:
                 break
-        
+
         # Insert the import at the right position
         import_line = "import langtrace_config  # Auto-injected for observability"
         lines.insert(insert_index, import_line)
-        
+
         # Write back the modified content
-        modified_content = '\n'.join(lines)
+        modified_content = "\n".join(lines)
         main_py_path.write_text(modified_content)
-        logger.info(f"Injected langtrace_config import into {agent_name} main.py at line {insert_index + 1}")
-        
+        logger.info(
+            f"Injected langtrace_config import into {agent_name} main.py at line {insert_index + 1}"
+        )
+
         return True
-    
+
     def _get_langtrace_config_template(self):
         """Get the LangTrace configuration template"""
         return '''import os

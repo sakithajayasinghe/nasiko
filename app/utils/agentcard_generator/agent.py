@@ -460,7 +460,6 @@ IMPORTANT:
                     },
                 },
             },
-
             {
                 "type": "function",
                 "function": {

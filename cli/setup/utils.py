@@ -80,6 +80,7 @@ def ensure_helm():
     _add_to_path(str(tools_dir))
     print(f"✅ Helm setup complete. Installed to {tools_dir}")
 
+
 def _add_to_path(path):
     """Updates PATH environment variable for the current process only"""
     os.environ["PATH"] = path + os.pathsep + os.environ["PATH"]
@@ -132,7 +133,8 @@ def ensure_terraform():
 
         # Extract
         import zipfile
-        with zipfile.ZipFile(str(zip_path), 'r') as zip_ref:
+
+        with zipfile.ZipFile(str(zip_path), "r") as zip_ref:
             zip_ref.extractall(str(tools_dir))
 
         # Cleanup
@@ -150,6 +152,7 @@ def ensure_terraform():
         print(f"❌ Failed to download Terraform: {e}")
         sys.exit(1)
 
+
 def ensure_doctl():
     """
     Ensures DigitalOcean CLI (doctl) is available. If not, downloads it to ~/.nasiko/bin
@@ -159,7 +162,9 @@ def ensure_doctl():
         return
 
     tools_dir = get_tools_dir()
-    doctl_path = tools_dir / ("doctl.exe" if platform.system() == "Windows" else "doctl")
+    doctl_path = tools_dir / (
+        "doctl.exe" if platform.system() == "Windows" else "doctl"
+    )
 
     if doctl_path.exists():
         _add_to_path(str(tools_dir))
@@ -176,8 +181,12 @@ def ensure_doctl():
         arch = "arm64"
 
     version = "1.101.0"
-    filename = f"doctl-{version}-{system}-{arch}.{'zip' if system == 'windows' else 'tar.gz'}"
-    url = f"https://github.com/digitalocean/doctl/releases/download/v{version}/{filename}"
+    filename = (
+        f"doctl-{version}-{system}-{arch}.{'zip' if system == 'windows' else 'tar.gz'}"
+    )
+    url = (
+        f"https://github.com/digitalocean/doctl/releases/download/v{version}/{filename}"
+    )
 
     try:
         archive_path = tools_dir / filename
@@ -188,7 +197,8 @@ def ensure_doctl():
         # Extract
         if filename.endswith("zip"):
             import zipfile
-            with zipfile.ZipFile(str(archive_path), 'r') as z:
+
+            with zipfile.ZipFile(str(archive_path), "r") as z:
                 z.extractall(str(tools_dir))
         else:
             with tarfile.open(str(archive_path), "r:gz") as t:
@@ -205,6 +215,7 @@ def ensure_doctl():
     except Exception as e:
         print(f"❌ Failed to install doctl: {e}")
         sys.exit(1)
+
 
 def ensure_kubectl():
     """
@@ -243,7 +254,7 @@ def ensure_kubectl():
     try:
         # Get latest stable version
         version_url = "https://dl.k8s.io/release/stable.txt"
-        version = urllib.request.urlopen(version_url).read().decode('utf-8').strip()
+        version = urllib.request.urlopen(version_url).read().decode("utf-8").strip()
 
         # Construct download URL
         url = f"https://dl.k8s.io/release/{version}/bin/{system}/{arch}/kubectl"
@@ -266,6 +277,7 @@ def ensure_kubectl():
         print(f"❌ Failed to download kubectl: {e}")
         sys.exit(1)
 
+
 def ensure_aws_cli():
     """
     Ensures AWS CLI v2 is available. If not, downloads it to ~/.nasiko/bin
@@ -287,7 +299,9 @@ def ensure_aws_cli():
     machine = platform.machine().lower()
 
     if system == "windows":
-        print("❌ AWS CLI not found. On Windows, please install the AWS CLI MSI manually.")
+        print(
+            "❌ AWS CLI not found. On Windows, please install the AWS CLI MSI manually."
+        )
         print("   Download from: https://awscli.amazonaws.com/AWSCLIV2.msi")
         sys.exit(1)
 
@@ -297,7 +311,9 @@ def ensure_aws_cli():
         print("   Or download from: https://awscli.amazonaws.com/AWSCLIV2.pkg")
         sys.exit(1)
 
-    print("⚙️  AWS CLI not found. Downloading and installing locally (this may take a minute)...")
+    print(
+        "⚙️  AWS CLI not found. Downloading and installing locally (this may take a minute)..."
+    )
 
     # Linux logic - support both x86_64 and arm64
     if machine in ["arm64", "aarch64"]:
@@ -316,7 +332,8 @@ def ensure_aws_cli():
 
         # 2. Unzip
         import zipfile
-        with zipfile.ZipFile(str(zip_path), 'r') as z:
+
+        with zipfile.ZipFile(str(zip_path), "r") as z:
             z.extractall(str(tools_dir))  # Extracts to tools_dir/aws
 
         # 3. Run Install Script
@@ -324,11 +341,11 @@ def ensure_aws_cli():
         install_script = tools_dir / "aws" / "install"
         install_dir = tools_dir / "aws-install"
 
-        subprocess.run([
-            str(install_script),
-            "-i", str(install_dir),
-            "-b", str(tools_dir)
-        ], check=True, stdout=subprocess.DEVNULL)
+        subprocess.run(
+            [str(install_script), "-i", str(install_dir), "-b", str(tools_dir)],
+            check=True,
+            stdout=subprocess.DEVNULL,
+        )
 
         # 4. Cleanup
         zip_path.unlink()
@@ -340,6 +357,7 @@ def ensure_aws_cli():
     except Exception as e:
         print(f"❌ Failed to install AWS CLI: {e}")
         sys.exit(1)
+
 
 def setup_terraform_modules(source: str = None, force: bool = False) -> Path:
     """
@@ -476,36 +494,42 @@ def get_service_external_ip(namespace, service_name, timeout=300):
         print(f"❌ Error loading kubeconfig: {e}")
         return "Unknown (Config Error)"
 
-    print(f"[dim]⏳ Waiting for LoadBalancer IP: {service_name} (up to {timeout}s)...[/]")
-    
+    print(
+        f"[dim]⏳ Waiting for LoadBalancer IP: {service_name} (up to {timeout}s)...[/]"
+    )
+
     # Initial wait to allow service status to propagate
     time.sleep(5)
-    
+
     start_time = time.time()
     while time.time() - start_time < timeout:
         try:
             svc = v1.read_namespaced_service(name=service_name, namespace=namespace)
-            
+
             # Check if LoadBalancer Ingress is populated
-            if svc.status and svc.status.load_balancer and svc.status.load_balancer.ingress:
+            if (
+                svc.status
+                and svc.status.load_balancer
+                and svc.status.load_balancer.ingress
+            ):
                 ingress = svc.status.load_balancer.ingress[0]
-                
+
                 # Handle both object (attribute access) and dict (dictionary access)
                 # Some client versions or configurations might return dicts
                 address = None
-                if hasattr(ingress, 'ip'):
-                    address = ingress.ip or getattr(ingress, 'hostname', None)
+                if hasattr(ingress, "ip"):
+                    address = ingress.ip or getattr(ingress, "hostname", None)
                 elif isinstance(ingress, dict):
-                    address = ingress.get('ip') or ingress.get('hostname')
-                
+                    address = ingress.get("ip") or ingress.get("hostname")
+
                 if address:
                     print(f"✅ LoadBalancer IP/Hostname found: {address}")
                     return address
-        except Exception as e:
+        except Exception:
             # Uncomment for deep debugging if needed
             # print(f"[debug] Error polling service {service_name}: {e}")
             pass
-        
-        time.sleep(5) # Wait 5s before retry
+
+        time.sleep(5)  # Wait 5s before retry
 
     return "Pending (Check via kubectl)"

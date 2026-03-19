@@ -9,6 +9,7 @@ from .tracing_utils import bootstrap_tracing
 try:
     from .config import ObservabilityConfig
     from .injector import TracingInjector
+
     __all__ = ["bootstrap_tracing", "ObservabilityConfig", "TracingInjector"]
 except ImportError:
     # At runtime in agent containers, only tracing_utils is needed

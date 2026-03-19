@@ -18,8 +18,6 @@ from webhook_agent_executor import (
     WebhookAgentExecutor,  # type: ignore[import-untyped]
 )
 from starlette.applications import Starlette
-from starlette.middleware.cors import CORSMiddleware
-
 
 load_dotenv()
 
@@ -27,34 +25,34 @@ logging.basicConfig()
 
 
 @click.command()
-@click.option('--host', 'host', default='localhost')
-@click.option('--port', 'port', default=10009)
+@click.option("--host", "host", default="localhost")
+@click.option("--port", "port", default=10009)
 def main(host: str, port: int):
     # Verify webhook URL is set
-    webhook_url = os.getenv('WEBHOOK_URL')
+    webhook_url = os.getenv("WEBHOOK_URL")
     if not webhook_url:
-        raise ValueError('WEBHOOK_URL environment variable not set')
+        raise ValueError("WEBHOOK_URL environment variable not set")
 
     skill = AgentSkill(
-        id='webhook_proxy',
-        name='Webhook Proxy',
-        description='Forward messages to webhook endpoints and return responses',
-        tags=['webhook', 'proxy', 'integration'],
+        id="webhook_proxy",
+        name="Webhook Proxy",
+        description="Forward messages to webhook endpoints and return responses",
+        tags=["webhook", "proxy", "integration"],
         examples=[
-            'Send a message to the webhook',
-            'How are you doing today?',
-            'Can you help me with my request?',
+            "Send a message to the webhook",
+            "How are you doing today?",
+            "Can you help me with my request?",
         ],
     )
 
     # AgentCard for Webhook-based agent
     agent_card = AgentCard(
-        name='Webhook Agent',
-        description='An agent that forwards messages to webhook endpoints and returns responses',
-        url=f'http://{host}:{port}/',
-        version='1.0.0',
-        default_input_modes=['text'],
-        default_output_modes=['text'],
+        name="Webhook Agent",
+        description="An agent that forwards messages to webhook endpoints and returns responses",
+        url=f"http://{host}:{port}/",
+        version="1.0.0",
+        default_input_modes=["text"],
+        default_output_modes=["text"],
         capabilities=AgentCapabilities(streaming=False),
         skills=[skill],
     )
@@ -64,7 +62,7 @@ def main(host: str, port: int):
 
     agent_executor = WebhookAgentExecutor(
         card=agent_card,
-        webhook_agent=agent_data['webhook_agent'],
+        webhook_agent=agent_data["webhook_agent"],
     )
 
     request_handler = DefaultRequestHandler(
@@ -81,5 +79,5 @@ def main(host: str, port: int):
     uvicorn.run(app, host=host, port=port)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

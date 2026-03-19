@@ -13,8 +13,6 @@ from langchain_community.vectorstores import FAISS
 
 
 from router.src.core.routing_engine import RoutingEngine
-from router.src.config import settings
-
 
 AGENT_CARDS_DIR = "router/data/agent_cards"
 QUERIES_RESPONSES_DIR = "router/data/query_response_pairs"
@@ -112,7 +110,7 @@ def prepare_agent_card(agent_card: Dict[str, Any]) -> str:
     )
 
     for i, skill in enumerate(agent_card["skills"]):
-        text += f"Skill {i}: {skill['name']}\nDescription: {skill["description"]}"
+        text += f"Skill {i}: {skill['name']}\nDescription: {skill['description']}"
 
     return text
 

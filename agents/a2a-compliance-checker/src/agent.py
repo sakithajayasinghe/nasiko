@@ -1,6 +1,7 @@
 """
 Core agent logic for translation.
 """
+
 import logging
 import os
 from typing import List, Dict, Any, Optional
@@ -53,17 +54,19 @@ RULES:
 RESPONSE FORMAT:
 - Provide only the translated text.
 """
-        
-        self.prompt = ChatPromptTemplate.from_messages([
-            ("system", self.system_prompt),
-            ("user", "{input}"),
-            MessagesPlaceholder(variable_name="agent_scratchpad"),
-        ])
-        
+
+        self.prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", self.system_prompt),
+                ("user", "{input}"),
+                MessagesPlaceholder(variable_name="agent_scratchpad"),
+            ]
+        )
+
         # Create Tool Calling Agent
         agent = create_tool_calling_agent(self.llm, self.tools, self.prompt)
         self.agent_executor = AgentExecutor(agent=agent, tools=self.tools, verbose=True)
-        
+
     def process_message(self, message_text: str) -> str:
         """
         Process the incoming message using LangChain.

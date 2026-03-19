@@ -2,7 +2,7 @@
 NANDA Routes - NANDA registry API endpoints
 """
 
-from fastapi import APIRouter, Path, Query, Depends
+from fastapi import APIRouter, Path, Query
 from typing import Optional
 
 from ..handlers import HandlerFactory
@@ -29,18 +29,25 @@ def create_nanda_routes(handlers: HandlerFactory) -> APIRouter:
         description="Retrieve all agents from NANDA registry with optional filtering",
     )
     async def get_all_agents(
-        limit: Optional[int] = Query(100, description="Maximum number of agents to return", ge=1, le=10000),
+        limit: Optional[int] = Query(
+            100, description="Maximum number of agents to return", ge=1, le=10000
+        ),
         page: Optional[int] = Query(1, description="Page number for pagination", ge=1),
-        agent_type: Optional[str] = Query(None, description="Filter by agent type (all, skill, persona, communication, iot)"),
-        status: Optional[str] = Query(None, description="Filter by status (online, offline)"),
-        category: Optional[str] = Query(None, description="Filter by category")
+        agent_type: Optional[str] = Query(
+            None,
+            description="Filter by agent type (all, skill, persona, communication, iot)",
+        ),
+        status: Optional[str] = Query(
+            None, description="Filter by status (online, offline)"
+        ),
+        category: Optional[str] = Query(None, description="Filter by category"),
     ):
         return await handlers.nanda.get_all_agents(
             limit=limit,
             page=page,
             agent_type=agent_type,
             status=status,
-            category=category
+            category=category,
         )
 
     @router.get(
@@ -61,8 +68,12 @@ def create_nanda_routes(handlers: HandlerFactory) -> APIRouter:
         description="Search agents by name or description in NANDA registry",
     )
     async def search_agents(
-        query: str = Query(..., description="Search query string", min_length=1, max_length=100),
-        limit: Optional[int] = Query(50, description="Maximum number of results", ge=1, le=1000)
+        query: str = Query(
+            ..., description="Search query string", min_length=1, max_length=100
+        ),
+        limit: Optional[int] = Query(
+            50, description="Maximum number of results", ge=1, le=1000
+        ),
     ):
         return await handlers.nanda.search_agents(query=query, limit=limit)
 
@@ -73,10 +84,17 @@ def create_nanda_routes(handlers: HandlerFactory) -> APIRouter:
         description="Retrieve agents filtered by category from NANDA registry",
     )
     async def get_agents_by_category(
-        category: str = Path(..., description="Category to filter by (skill, persona, communication, iot)"),
-        limit: Optional[int] = Query(100, description="Maximum number of results", ge=1, le=1000)
+        category: str = Path(
+            ...,
+            description="Category to filter by (skill, persona, communication, iot)",
+        ),
+        limit: Optional[int] = Query(
+            100, description="Maximum number of results", ge=1, le=1000
+        ),
     ):
-        return await handlers.nanda.get_agents_by_category(category=category, limit=limit)
+        return await handlers.nanda.get_agents_by_category(
+            category=category, limit=limit
+        )
 
     @router.get(
         "/agents/online",
@@ -85,7 +103,9 @@ def create_nanda_routes(handlers: HandlerFactory) -> APIRouter:
         description="Retrieve all currently online agents from NANDA registry",
     )
     async def get_online_agents(
-        limit: Optional[int] = Query(100, description="Maximum number of results", ge=1, le=1000)
+        limit: Optional[int] = Query(
+            100, description="Maximum number of results", ge=1, le=1000
+        )
     ):
         return await handlers.nanda.get_online_agents(limit=limit)
 
@@ -110,7 +130,7 @@ def create_nanda_routes(handlers: HandlerFactory) -> APIRouter:
         return await handlers.nanda.get_agent_statistics()
 
     # Messages API Endpoints
-    
+
     @router.get(
         "/messages",
         response_model=NANDAApiResponse,
@@ -118,16 +138,19 @@ def create_nanda_routes(handlers: HandlerFactory) -> APIRouter:
         description="Retrieve all messages from NANDA registry with optional pagination",
     )
     async def get_all_messages(
-        limit: Optional[int] = Query(20, description="Maximum number of messages to return", ge=1, le=1000),
+        limit: Optional[int] = Query(
+            20, description="Maximum number of messages to return", ge=1, le=1000
+        ),
         offset: Optional[int] = Query(None, description="Offset for pagination", ge=0),
-        before: Optional[str] = Query(None, description="Get messages before this message ID"),
-        after: Optional[str] = Query(None, description="Get messages after this message ID")
+        before: Optional[str] = Query(
+            None, description="Get messages before this message ID"
+        ),
+        after: Optional[str] = Query(
+            None, description="Get messages after this message ID"
+        ),
     ):
         return await handlers.nanda.get_all_messages(
-            limit=limit,
-            offset=offset,
-            before=before,
-            after=after
+            limit=limit, offset=offset, before=before, after=after
         )
 
     @router.get(
@@ -138,7 +161,9 @@ def create_nanda_routes(handlers: HandlerFactory) -> APIRouter:
     )
     async def get_messages_by_agent(
         agent_id: str = Path(..., description="The unique identifier of the agent"),
-        limit: Optional[int] = Query(20, description="Maximum number of messages to return", ge=1, le=1000)
+        limit: Optional[int] = Query(
+            20, description="Maximum number of messages to return", ge=1, le=1000
+        ),
     ):
         return await handlers.nanda.get_messages_by_agent(agent_id, limit)
 
@@ -149,8 +174,12 @@ def create_nanda_routes(handlers: HandlerFactory) -> APIRouter:
         description="Retrieve messages for a specific conversation from NANDA registry",
     )
     async def get_messages_by_conversation(
-        conversation_id: str = Path(..., description="The unique identifier of the conversation"),
-        limit: Optional[int] = Query(50, description="Maximum number of messages to return", ge=1, le=1000)
+        conversation_id: str = Path(
+            ..., description="The unique identifier of the conversation"
+        ),
+        limit: Optional[int] = Query(
+            50, description="Maximum number of messages to return", ge=1, le=1000
+        ),
     ):
         return await handlers.nanda.get_messages_by_conversation(conversation_id, limit)
 
@@ -161,8 +190,12 @@ def create_nanda_routes(handlers: HandlerFactory) -> APIRouter:
         description="Retrieve messages filtered by type from NANDA registry",
     )
     async def get_messages_by_type(
-        message_type: str = Path(..., description="The type of messages (a2a_response, a2a_send)"),
-        limit: Optional[int] = Query(50, description="Maximum number of messages to return", ge=1, le=1000)
+        message_type: str = Path(
+            ..., description="The type of messages (a2a_response, a2a_send)"
+        ),
+        limit: Optional[int] = Query(
+            50, description="Maximum number of messages to return", ge=1, le=1000
+        ),
     ):
         return await handlers.nanda.get_messages_by_type(message_type, limit)
 

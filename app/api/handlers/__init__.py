@@ -17,17 +17,18 @@ from .search_handler import SearchHandler
 from .observability_handler import ObservabilityHandler
 from .nanda_handler import NANDAHandler
 
+
 class HandlerFactory:
     """
     Factory class that initializes and manages all handlers
     Provides a single point of access for all handler functionality
     """
-    
+
     def __init__(self, service, logger, auth_states: dict = None):
         self.service = service
         self.logger = logger
         self.auth_states = auth_states or {}
-        
+
         # Initialize all handlers with shared dependencies
         self.registry = RegistryHandler(service, logger)
         self.agent_upload = AgentUploadHandler(service, logger)
@@ -42,10 +43,15 @@ class HandlerFactory:
         self.nanda = NANDAHandler(service, logger)
 
 
-
 __all__ = [
-    'HandlerFactory', 'BaseHandler',
-    'RegistryHandler', 'AgentUploadHandler', 'AgentOperationsHandler',
-    'GitHubHandler', 'HealthHandler',
-    'TracesHandler', 'N8nHandler', 'NANDAHandler'
+    "HandlerFactory",
+    "BaseHandler",
+    "RegistryHandler",
+    "AgentUploadHandler",
+    "AgentOperationsHandler",
+    "GitHubHandler",
+    "HealthHandler",
+    "TracesHandler",
+    "N8nHandler",
+    "NANDAHandler",
 ]

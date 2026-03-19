@@ -10,7 +10,6 @@ dependencies = [
     "arize-phoenix-otel>=0.6.0",
     "astor>=0.8.1",
     "beautifulsoup4>=4.13.4",
-    "black>=25.1.0",
     "click>=8.2.1",
     "fastapi>=0.116.1",
     "langchain>=0.3.27",
@@ -72,4 +71,10 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pyinstaller>=6.17.0",
+    "black==26.3.1",
+    "ruff>=0.8.0",
+    "mypy>=1.0.0",
 ]
+
+[tool.black]
+target-version = ['py312']

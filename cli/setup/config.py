@@ -61,7 +61,6 @@ ENV_VAR_MAPPING = {
     "region": "NASIKO_REGION",
     "cluster_name": "NASIKO_CLUSTER_NAME",
     "kubeconfig": "KUBECONFIG",
-
     # Registry configuration
     "registry_type": "NASIKO_CONTAINER_REGISTRY_TYPE",
     "cloud_reg_name": "NASIKO_CONTAINER_REGISTRY_NAME",
@@ -69,45 +68,37 @@ ENV_VAR_MAPPING = {
     "registry_pass": "NASIKO_REGISTRY_PASS",
     "domain": "NASIKO_DOMAIN",
     "email": "NASIKO_EMAIL",
-
     # Application configuration
     "openai_key": "OPENAI_API_KEY",
     "public_registry_user": "NASIKO_PUBLIC_REGISTRY_USER",
-
     # Super user configuration
     "superuser_username": "NASIKO_SUPERUSER_USERNAME",
     "superuser_email": "NASIKO_SUPERUSER_EMAIL",
-
     # GitHub OAuth (optional)
     "github_client_id": "GITHUB_CLIENT_ID",
     "github_client_secret": "GITHUB_CLIENT_SECRET",
-
     # Terraform configuration
     "terraform_dir": "NASIKO_TERRAFORM_DIR",  # Path to terraform modules
-    "state_dir": "NASIKO_STATE_DIR",          # Path for local state files
-
+    "state_dir": "NASIKO_STATE_DIR",  # Path for local state files
     # Remote state backend configuration (S3)
-    "tf_backend": "NASIKO_TF_BACKEND",                  # Backend type: local, s3, gcs, remote
-    "tf_backend_bucket": "NASIKO_TF_BACKEND_BUCKET",    # S3/GCS bucket name
-    "tf_backend_region": "NASIKO_TF_BACKEND_REGION",    # S3 bucket region
+    "tf_backend": "NASIKO_TF_BACKEND",  # Backend type: local, s3, gcs, remote
+    "tf_backend_bucket": "NASIKO_TF_BACKEND_BUCKET",  # S3/GCS bucket name
+    "tf_backend_region": "NASIKO_TF_BACKEND_REGION",  # S3 bucket region
     "tf_backend_key_prefix": "NASIKO_TF_BACKEND_KEY_PREFIX",  # State file path prefix
     "tf_backend_dynamodb_table": "NASIKO_TF_BACKEND_DYNAMODB_TABLE",  # DynamoDB table for locking
-
     # Terraform Cloud configuration
-    "tf_cloud_org": "NASIKO_TF_CLOUD_ORG",              # Terraform Cloud organization
+    "tf_cloud_org": "NASIKO_TF_CLOUD_ORG",  # Terraform Cloud organization
     "tf_cloud_workspace": "NASIKO_TF_CLOUD_WORKSPACE",  # Terraform Cloud workspace prefix
-
     # Database Configuration
-    
 }
 
 # Default config file search paths (in order of priority)
 CONFIG_FILE_SEARCH_PATHS = [
     ".nasiko-local.env",
-    ".nasiko.env",           # Project-specific
-    ".nasiko-aws.env",       # AWS-specific
-    ".nasiko-do.env",        # DigitalOcean-specific
-    ".env",                  # Generic
+    ".nasiko.env",  # Project-specific
+    ".nasiko-aws.env",  # AWS-specific
+    ".nasiko-do.env",  # DigitalOcean-specific
+    ".env",  # Generic
 ]
 
 
@@ -159,7 +150,9 @@ def load_config_file(config_path: Optional[str] = None, verbose: bool = True) ->
         from dotenv import load_dotenv
     except ImportError:
         if verbose:
-            console.print("[yellow]Warning: python-dotenv not installed, skipping .env file loading[/]")
+            console.print(
+                "[yellow]Warning: python-dotenv not installed, skipping .env file loading[/]"
+            )
         return False
 
     config_file = find_config_file(config_path)
@@ -216,7 +209,12 @@ def print_config_summary(loaded_from_file: bool, config_file: Optional[Path] = N
         value = os.environ.get(env_var)
         if value:
             # Mask sensitive values
-            if "KEY" in env_var or "SECRET" in env_var or "TOKEN" in env_var or "PASS" in env_var:
+            if (
+                "KEY" in env_var
+                or "SECRET" in env_var
+                or "TOKEN" in env_var
+                or "PASS" in env_var
+            ):
                 masked = value[:4] + "..." + value[-4:] if len(value) > 8 else "****"
                 console.print(f"  {display_name}: [dim]{masked}[/]")
             else:
@@ -254,6 +252,7 @@ def validate_required_credentials(provider: Optional[str] = None) -> List[str]:
 
 
 # --- Terraform and State Directory Functions ---
+
 
 def get_nasiko_home() -> Path:
     """
@@ -296,7 +295,7 @@ def get_terraform_dir(cli_override: Optional[str] = None) -> Path:
             return path
         else:
             console.print(f"[yellow]Warning: Terraform directory not found: {path}[/]")
-            console.print(f"[yellow]Falling back to default location[/]")
+            console.print("[yellow]Falling back to default location[/]")
 
     env_path = os.environ.get("NASIKO_TERRAFORM_DIR")
     if env_path:
@@ -309,7 +308,9 @@ def get_terraform_dir(cli_override: Optional[str] = None) -> Path:
     return get_default_terraform_dir()
 
 
-def get_state_dir(provider: str, cluster_name: str, cli_override: Optional[str] = None) -> Path:
+def get_state_dir(
+    provider: str, cluster_name: str, cli_override: Optional[str] = None
+) -> Path:
     """
     Get the Terraform state directory for a specific cluster.
 
@@ -368,7 +369,9 @@ def get_backend_config() -> dict:
             "type": "s3",
             "bucket": os.environ.get("NASIKO_TF_BACKEND_BUCKET"),
             "region": os.environ.get("NASIKO_TF_BACKEND_REGION", "us-east-1"),
-            "key_prefix": os.environ.get("NASIKO_TF_BACKEND_KEY_PREFIX", "nasiko/terraform"),
+            "key_prefix": os.environ.get(
+                "NASIKO_TF_BACKEND_KEY_PREFIX", "nasiko/terraform"
+            ),
         }
         # Optional DynamoDB table for state locking
         dynamodb_table = os.environ.get("NASIKO_TF_BACKEND_DYNAMODB_TABLE")
@@ -376,7 +379,9 @@ def get_backend_config() -> dict:
             config["dynamodb_table"] = dynamodb_table
 
         if not config["bucket"]:
-            console.print("[yellow]Warning: NASIKO_TF_BACKEND=s3 but NASIKO_TF_BACKEND_BUCKET not set[/]")
+            console.print(
+                "[yellow]Warning: NASIKO_TF_BACKEND=s3 but NASIKO_TF_BACKEND_BUCKET not set[/]"
+            )
             console.print("[yellow]Falling back to local state[/]")
             return {"type": "local"}
 
@@ -386,10 +391,14 @@ def get_backend_config() -> dict:
         config = {
             "type": "gcs",
             "bucket": os.environ.get("NASIKO_TF_BACKEND_BUCKET"),
-            "prefix": os.environ.get("NASIKO_TF_BACKEND_KEY_PREFIX", "nasiko/terraform"),
+            "prefix": os.environ.get(
+                "NASIKO_TF_BACKEND_KEY_PREFIX", "nasiko/terraform"
+            ),
         }
         if not config["bucket"]:
-            console.print("[yellow]Warning: NASIKO_TF_BACKEND=gcs but NASIKO_TF_BACKEND_BUCKET not set[/]")
+            console.print(
+                "[yellow]Warning: NASIKO_TF_BACKEND=gcs but NASIKO_TF_BACKEND_BUCKET not set[/]"
+            )
             return {"type": "local"}
         return config
 
@@ -401,16 +410,22 @@ def get_backend_config() -> dict:
             "workspace_prefix": os.environ.get("NASIKO_TF_CLOUD_WORKSPACE", "nasiko-"),
         }
         if not config["organization"]:
-            console.print("[yellow]Warning: NASIKO_TF_BACKEND=remote but NASIKO_TF_CLOUD_ORG not set[/]")
+            console.print(
+                "[yellow]Warning: NASIKO_TF_BACKEND=remote but NASIKO_TF_CLOUD_ORG not set[/]"
+            )
             return {"type": "local"}
         return config
 
     else:
-        console.print(f"[yellow]Warning: Unknown backend type '{backend_type}', using local[/]")
+        console.print(
+            f"[yellow]Warning: Unknown backend type '{backend_type}', using local[/]"
+        )
         return {"type": "local"}
 
 
-def get_cluster_credentials_file(cluster_name: str, provider: Optional[str] = None) -> Path:
+def get_cluster_credentials_file(
+    cluster_name: str, provider: Optional[str] = None
+) -> Path:
     """
     Get the path to the superuser credentials file for a specific cluster.
 
@@ -456,23 +471,23 @@ def get_cluster_info_file(cluster_name: str, provider: Optional[str] = None) -> 
 def save_cluster_info(provider: Optional[str], cluster_name: str, data: Dict[str, Any]):
     """
     Save cluster information (URLs, metadata) to the state directory.
-    
+
     Args:
         provider: Cloud provider
         cluster_name: Cluster name
         data: Dictionary containing cluster info
     """
     info_file = get_cluster_info_file(cluster_name, provider)
-    
+
     try:
         # Update existing if present
         if info_file.exists():
-            with open(info_file, 'r') as f:
+            with open(info_file, "r") as f:
                 existing = json.load(f)
             existing.update(data)
             data = existing
-            
-        with open(info_file, 'w') as f:
+
+        with open(info_file, "w") as f:
             json.dump(data, f, indent=2)
         info_file.chmod(0o644)  # rw-r--r--
         console.print(f"[dim]Saved cluster info to: {info_file}[/]")
@@ -483,10 +498,10 @@ def save_cluster_info(provider: Optional[str], cluster_name: str, data: Dict[str
 def get_cluster_api_url(cluster_name: str) -> Optional[str]:
     """
     Get the API URL for a specific cluster by checking state directories.
-    
+
     Args:
         cluster_name: Name of the cluster
-        
+
     Returns:
         API URL if found, None otherwise
     """
@@ -494,65 +509,66 @@ def get_cluster_api_url(cluster_name: str) -> Optional[str]:
     state_root = get_nasiko_home() / "state"
     if not state_root.exists():
         return None
-        
+
     for provider_dir in state_root.iterdir():
         if not provider_dir.is_dir():
             continue
-            
+
         cluster_dir = provider_dir / cluster_name
         info_file = cluster_dir / "cluster-info.json"
-        
+
         if info_file.exists():
             try:
-                with open(info_file, 'r') as f:
+                with open(info_file, "r") as f:
                     data = json.load(f)
                     return data.get("gateway_url")
             except Exception:
                 continue
-                
+
     return None
+
 
 def list_clusters() -> List[Dict[str, Any]]:
     """
     List all configured clusters found in local state.
-    
+
     Returns:
         List of dictionaries containing cluster info (name, provider, url, etc.)
     """
     clusters = []
     state_root = get_nasiko_home() / "state"
-    
+
     if not state_root.exists():
         return clusters
-        
+
     for provider_dir in state_root.iterdir():
         if not provider_dir.is_dir():
             continue
-            
+
         for cluster_dir in provider_dir.iterdir():
             if not cluster_dir.is_dir():
                 continue
-                
+
             info_file = cluster_dir / "cluster-info.json"
             cluster_info = {
                 "name": cluster_dir.name,
                 "provider": provider_dir.name,
                 "url": "Unknown",
-                "path": str(cluster_dir)
+                "path": str(cluster_dir),
             }
-            
+
             if info_file.exists():
                 try:
-                    with open(info_file, 'r') as f:
+                    with open(info_file, "r") as f:
                         data = json.load(f)
                         cluster_info.update(data)
                         if "gateway_url" in data:
                             cluster_info["url"] = data["gateway_url"]
                 except Exception:
                     pass
-            
+
             clusters.append(cluster_info)
-            
+
     return clusters
 
 
@@ -564,13 +580,15 @@ def print_state_info(provider: str, cluster_name: str):
 
     if backend["type"] == "local":
         state_dir = get_state_dir(provider, cluster_name)
-        console.print(f"  Backend: [cyan]local[/]")
+        console.print("  Backend: [cyan]local[/]")
         console.print(f"  State Directory: [cyan]{state_dir}[/]")
-        console.print(f"  [dim]Tip: Back up this directory to preserve your infrastructure state[/]")
+        console.print(
+            "  [dim]Tip: Back up this directory to preserve your infrastructure state[/]"
+        )
 
     elif backend["type"] == "s3":
         key = f"{backend['key_prefix']}/{provider}/{cluster_name}/terraform.tfstate"
-        console.print(f"  Backend: [cyan]s3[/]")
+        console.print("  Backend: [cyan]s3[/]")
         console.print(f"  Bucket: [cyan]{backend['bucket']}[/]")
         console.print(f"  Key: [cyan]{key}[/]")
         console.print(f"  Region: [cyan]{backend['region']}[/]")
@@ -578,13 +596,15 @@ def print_state_info(provider: str, cluster_name: str):
             console.print(f"  Lock Table: [cyan]{backend['dynamodb_table']}[/]")
 
     elif backend["type"] == "gcs":
-        console.print(f"  Backend: [cyan]gcs[/]")
+        console.print("  Backend: [cyan]gcs[/]")
         console.print(f"  Bucket: [cyan]{backend['bucket']}[/]")
-        console.print(f"  Prefix: [cyan]{backend['prefix']}/{provider}/{cluster_name}[/]")
+        console.print(
+            f"  Prefix: [cyan]{backend['prefix']}/{provider}/{cluster_name}[/]"
+        )
 
     elif backend["type"] == "remote":
         workspace = f"{backend['workspace_prefix']}{provider}-{cluster_name}"
-        console.print(f"  Backend: [cyan]Terraform Cloud[/]")
+        console.print("  Backend: [cyan]Terraform Cloud[/]")
         console.print(f"  Organization: [cyan]{backend['organization']}[/]")
         console.print(f"  Workspace: [cyan]{workspace}[/]")
 

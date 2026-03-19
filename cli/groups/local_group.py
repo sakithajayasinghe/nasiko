@@ -38,10 +38,7 @@ def _ensure_docker_running() -> None:
     """Verify Docker daemon is running."""
     try:
         result = subprocess.run(
-            ["docker", "ps"],
-            capture_output=True,
-            timeout=5,
-            check=False
+            ["docker", "ps"], capture_output=True, timeout=5, check=False
         )
         if result.returncode != 0:
             console.print("[red]Error: Docker daemon is not running[/]")
@@ -62,7 +59,7 @@ def _ensure_docker_compose() -> None:
             ["docker", "compose", "version"],
             capture_output=True,
             timeout=5,
-            check=False
+            check=False,
         )
         if result.returncode != 0:
             console.print("[red]Error: Docker Compose plugin is not installed[/]")
@@ -76,34 +73,45 @@ def _ensure_docker_compose() -> None:
 def _check_port_availability(port: int) -> bool:
     """Check if a port is available."""
     import socket
+
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        result = sock.connect_ex(('127.0.0.1', port))
+        result = sock.connect_ex(("127.0.0.1", port))
         sock.close()
         return result != 0
     except Exception:
         return True
 
 
-def _compose_cmd(args: list[str], check: bool = True) -> subprocess.CompletedProcess[bytes]:
+def _compose_cmd(
+    args: list[str], check: bool = True
+) -> subprocess.CompletedProcess[bytes]:
     """Run docker compose command."""
     project_root = _get_project_root()
     cmd = [
-        "docker", "compose",
-        "-f", str(project_root / COMPOSE_FILE),
-        "-p", PROJECT_NAME
+        "docker",
+        "compose",
+        "-f",
+        str(project_root / COMPOSE_FILE),
+        "-p",
+        PROJECT_NAME,
     ] + args
 
     return subprocess.run(cmd, check=check, capture_output=False)
 
 
-def _compose_cmd_silent(args: list[str], check: bool = False) -> subprocess.CompletedProcess[str]:
+def _compose_cmd_silent(
+    args: list[str], check: bool = False
+) -> subprocess.CompletedProcess[str]:
     """Run docker compose command silently."""
     project_root = _get_project_root()
     cmd = [
-        "docker", "compose",
-        "-f", str(project_root / COMPOSE_FILE),
-        "-p", PROJECT_NAME
+        "docker",
+        "compose",
+        "-f",
+        str(project_root / COMPOSE_FILE),
+        "-p",
+        PROJECT_NAME,
     ] + args
 
     return subprocess.run(cmd, check=check, capture_output=True, text=True)
@@ -114,13 +122,14 @@ def _load_env_file(project_root: Path) -> None:
     env_files = [
         project_root / ".nasiko.env",
         project_root / ".nasiko-local.env",
-        project_root / ".env"
+        project_root / ".env",
     ]
 
     for env_file in env_files:
         if env_file.exists():
             console.print(f"[dim]Loading environment from: {env_file.name}[/]")
             from dotenv import load_dotenv
+
             _ = load_dotenv(env_file, override=False)
             return
 
@@ -173,8 +182,12 @@ def _get_port(env_var: str) -> int:
 
 @local_app.command(name="up")
 def local_up(
-    build: Annotated[bool, typer.Option("--build/--no-build", help="Build images before starting")] = True,
-    detach: Annotated[bool, typer.Option("--detach/--attach", help="Run in background")] = True,
+    build: Annotated[
+        bool, typer.Option("--build/--no-build", help="Build images before starting")
+    ] = True,
+    detach: Annotated[
+        bool, typer.Option("--detach/--attach", help="Run in background")
+    ] = True,
 ) -> None:
     """Start the Nasiko local development stack."""
     try:
@@ -217,7 +230,10 @@ def local_up(
             if result_config.returncode == 0:
                 # Extract container_name values and remove any that already exist
                 import re
-                container_names = re.findall(r"container_name:\s*(.+)", result_config.stdout)
+
+                container_names = re.findall(
+                    r"container_name:\s*(.+)", result_config.stdout
+                )
                 if container_names:
                     subprocess.run(
                         ["docker", "rm", "-f"] + container_names,
@@ -230,7 +246,9 @@ def local_up(
             console.print("[cyan]Building images...[/]")
             result = _compose_cmd(["build"], check=False)
             if result.returncode != 0:
-                console.print("[yellow]Warning: Some images failed to build (may already exist)[/]")
+                console.print(
+                    "[yellow]Warning: Some images failed to build (may already exist)[/]"
+                )
 
         # Start services
         cmd_args = ["up", "--remove-orphans"]
@@ -245,7 +263,9 @@ def local_up(
             console.print("\n[bold]Waiting for services to be ready...[/]")
 
             # Wait for key services
-            with Live(Spinner("dots", text="Checking service health..."), console=console) as live:
+            with Live(
+                Spinner("dots", text="Checking service health..."), console=console
+            ) as live:
                 time.sleep(3)  # Give services time to start
                 live.update(Spinner("dots", text="Checking MongoDB..."))
                 time.sleep(2)
@@ -259,31 +279,77 @@ def local_up(
             console.print("[bold]Nasiko Local Stack is Ready![/]")
             console.print("[bold cyan]═══════════════════════════════════════════[/]\n")
 
-            services_table = Table(title="Available Services", show_header=True, header_style="bold magenta")
+            services_table = Table(
+                title="Available Services",
+                show_header=True,
+                header_style="bold magenta",
+            )
             services_table.add_column("Service", style="cyan")
             services_table.add_column("URL", style="green")
             services_table.add_column("Purpose", style="yellow")
 
-            services_table.add_row("Kong Gateway", f"http://localhost:{_get_port('NASIKO_PORT_KONG')}", "API gateway & agent routing")
-            services_table.add_row("Backend API", f"http://localhost:{_get_port('NASIKO_PORT_BACKEND')}/docs", "Nasiko API (Swagger)")
-            services_table.add_row("Konga UI", f"http://localhost:{_get_port('NASIKO_PORT_KONGA')}", "Kong management UI")
-            services_table.add_row("Service Registry", f"http://localhost:{_get_port('NASIKO_PORT_SERVICE_REGISTRY')}", "Agent discovery API")
-            services_table.add_row("Router", f"http://localhost:{_get_port('NASIKO_PORT_ROUTER')}", "Query routing service")
-            services_table.add_row("Auth Service", f"http://localhost:{_get_port('NASIKO_PORT_AUTH')}", "Authentication service")
-            services_table.add_row("Chat History", f"http://localhost:{_get_port('NASIKO_PORT_CHAT')}", "Chat history API")
-            services_table.add_row("Web UI", f"http://localhost:{_get_port('NASIKO_PORT_WEB')}", "Nasiko web interface")
+            services_table.add_row(
+                "Kong Gateway",
+                f"http://localhost:{_get_port('NASIKO_PORT_KONG')}",
+                "API gateway & agent routing",
+            )
+            services_table.add_row(
+                "Backend API",
+                f"http://localhost:{_get_port('NASIKO_PORT_BACKEND')}/docs",
+                "Nasiko API (Swagger)",
+            )
+            services_table.add_row(
+                "Konga UI",
+                f"http://localhost:{_get_port('NASIKO_PORT_KONGA')}",
+                "Kong management UI",
+            )
+            services_table.add_row(
+                "Service Registry",
+                f"http://localhost:{_get_port('NASIKO_PORT_SERVICE_REGISTRY')}",
+                "Agent discovery API",
+            )
+            services_table.add_row(
+                "Router",
+                f"http://localhost:{_get_port('NASIKO_PORT_ROUTER')}",
+                "Query routing service",
+            )
+            services_table.add_row(
+                "Auth Service",
+                f"http://localhost:{_get_port('NASIKO_PORT_AUTH')}",
+                "Authentication service",
+            )
+            services_table.add_row(
+                "Chat History",
+                f"http://localhost:{_get_port('NASIKO_PORT_CHAT')}",
+                "Chat history API",
+            )
+            services_table.add_row(
+                "Web UI",
+                f"http://localhost:{_get_port('NASIKO_PORT_WEB')}",
+                "Nasiko web interface",
+            )
 
             console.print(services_table)
 
             console.print("\n[bold]Quick Commands:[/]")
-            console.print("  • View logs:           [cyan]nasiko local logs [service][/]")
+            console.print(
+                "  • View logs:           [cyan]nasiko local logs [service][/]"
+            )
             console.print("  • Check status:        [cyan]nasiko local status[/]")
-            console.print("  • Deploy agent:        [cyan]nasiko local deploy-agent <name> <path>[/]")
+            console.print(
+                "  • Deploy agent:        [cyan]nasiko local deploy-agent <name> <path>[/]"
+            )
             console.print("  • Stop stack:          [cyan]nasiko local down[/]")
             console.print("\n[bold]First Steps:[/]")
-            console.print(f"  1. Open web UI:        [cyan]http://localhost:{_get_port('NASIKO_PORT_WEB')}[/]")
-            console.print("  2. Deploy an agent:    [cyan]nasiko agent upload-directory ./agents/my-agent[/]")
-            console.print(f"  3. View agent registry: [cyan]http://localhost:{_get_port('NASIKO_PORT_SERVICE_REGISTRY')}/agents[/]")
+            console.print(
+                f"  1. Open web UI:        [cyan]http://localhost:{_get_port('NASIKO_PORT_WEB')}[/]"
+            )
+            console.print(
+                "  2. Deploy an agent:    [cyan]nasiko agent upload-directory ./agents/my-agent[/]"
+            )
+            console.print(
+                f"  3. View agent registry: [cyan]http://localhost:{_get_port('NASIKO_PORT_SERVICE_REGISTRY')}/agents[/]"
+            )
             console.print("")
 
     except FileNotFoundError as e:
@@ -296,7 +362,9 @@ def local_up(
 
 @local_app.command(name="down")
 def local_down(
-    volumes: Annotated[bool, typer.Option("--volumes", "-v", help="Remove volumes (data loss!)")] = False,
+    volumes: Annotated[
+        bool, typer.Option("--volumes", "-v", help="Remove volumes (data loss!)")
+    ] = False,
 ) -> None:
     """Stop and remove the Nasiko local development stack."""
     try:
@@ -304,7 +372,9 @@ def local_down(
         _ensure_docker_compose()
 
         if volumes:
-            console.print("[red]⚠️  Warning: This will remove all volumes (MongoDB, Redis data will be deleted)[/]")
+            console.print(
+                "[red]⚠️  Warning: This will remove all volumes (MongoDB, Redis data will be deleted)[/]"
+            )
             if not typer.confirm("Are you sure?"):
                 console.print("[yellow]Cancelled.[/]")
                 raise typer.Exit(0)
@@ -333,7 +403,9 @@ def local_status() -> None:
         if result.returncode == 0:
             console.print(result.stdout)
         else:
-            console.print("[yellow]Stack is not running. Start with: nasiko local up[/]")
+            console.print(
+                "[yellow]Stack is not running. Start with: nasiko local up[/]"
+            )
 
     except Exception as e:
         console.print(f"[red]Error: {e}[/]")
@@ -342,9 +414,13 @@ def local_status() -> None:
 
 @local_app.command(name="logs")
 def local_logs(
-    service: Annotated[Optional[List[str]], typer.Argument(help="Service name (omit to see all)")] = None,
+    service: Annotated[
+        Optional[List[str]], typer.Argument(help="Service name (omit to see all)")
+    ] = None,
     follow: Annotated[bool, typer.Option("-f", "--follow", help="Follow logs")] = False,
-    lines: Annotated[int, typer.Option("-n", "--lines", help="Number of lines to show")] = 100,
+    lines: Annotated[
+        int, typer.Option("-n", "--lines", help="Number of lines to show")
+    ] = 100,
 ) -> None:
     """View logs from Nasiko local stack."""
     try:
@@ -368,7 +444,10 @@ def local_logs(
 @local_app.command(name="deploy-agent")
 def local_deploy_agent(
     agent_name: Annotated[str, typer.Argument(help="Agent name")],
-    agent_path: Annotated[Optional[str], typer.Argument(help="Path to agent directory (default: ./agents/{agent_name})")] = None,
+    agent_path: Annotated[
+        Optional[str],
+        typer.Argument(help="Path to agent directory (default: ./agents/{agent_name})"),
+    ] = None,
 ) -> None:
     """Deploy an agent to the local stack."""
     try:
@@ -401,11 +480,7 @@ def local_deploy_agent(
 
         try:
             with console.status("[bold cyan]Sending deployment request..."):
-                response = requests.post(
-                    endpoint,
-                    json=payload,
-                    timeout=10
-                )
+                response = requests.post(endpoint, json=payload, timeout=10)
 
             if response.status_code == 200:
                 # Use cast to more specific dict type to avoid Unknown
@@ -413,8 +488,10 @@ def local_deploy_agent(
                 console.print("\n[green]✓ Deployment initiated![/]")
                 console.print("\n[bold]Agent Details:[/]")
                 console.print(f"  Name: [cyan]{result.get('agent_name')}[/]")
-                console.print(f"  Status: [yellow]{result.get('status', 'building')}[/]")
-                if result.get('url'):
+                console.print(
+                    f"  Status: [yellow]{result.get('status', 'building')}[/]"
+                )
+                if result.get("url"):
                     console.print(f"  URL: [green]{result['url']}[/]")
                 console.print("\n[dim]Polling for deployment status...[/]")
 
@@ -426,8 +503,7 @@ def local_deploy_agent(
                     attempt += 1
 
                     status_response = requests.get(
-                        f"{api_url}/api/v1/registries?name={agent_name}",
-                        timeout=10
+                        f"{api_url}/api/v1/registries?name={agent_name}", timeout=10
                     )
 
                     if status_response.status_code == 200:
@@ -436,14 +512,20 @@ def local_deploy_agent(
                             agent = agents[0]
                             status = agent.get("status", "unknown")
                             if status == "active":
-                                console.print("[green]✓ Agent deployed successfully![/]")
-                                console.print(f"  Agent URL: [green]{agent.get('service_url', 'N/A')}[/]")
+                                console.print(
+                                    "[green]✓ Agent deployed successfully![/]"
+                                )
+                                console.print(
+                                    f"  Agent URL: [green]{agent.get('service_url', 'N/A')}[/]"
+                                )
                                 return
                             elif status == "failed":
                                 console.print("[red]✗ Deployment failed[/]")
                                 raise typer.Exit(1)
 
-                console.print("[yellow]⏱️  Deployment timeout. Check status with: nasiko local status[/]")
+                console.print(
+                    "[yellow]⏱️  Deployment timeout. Check status with: nasiko local status[/]"
+                )
 
             else:
                 console.print(f"[red]Error: {response.status_code}[/]")
@@ -453,7 +535,9 @@ def local_deploy_agent(
         except requests.exceptions.ConnectionError:
             console.print("[red]Error: Could not connect to Nasiko backend[/]")
             console.print(f"[dim]URL: {endpoint}[/]")
-            console.print("[yellow]Tip: Make sure the stack is running with 'nasiko local up'[/]")
+            console.print(
+                "[yellow]Tip: Make sure the stack is running with 'nasiko local up'[/]"
+            )
             raise typer.Exit(1)
 
     except Exception as e:
@@ -479,12 +563,19 @@ def local_shell(
             shell_cmd = "/bin/bash"
 
         project_root = _get_project_root()
-        _ = subprocess.run([
-            "docker", "compose",
-            "-f", str(project_root / COMPOSE_FILE),
-            "-p", PROJECT_NAME,
-            "exec", service, shell_cmd
-        ])
+        _ = subprocess.run(
+            [
+                "docker",
+                "compose",
+                "-f",
+                str(project_root / COMPOSE_FILE),
+                "-p",
+                PROJECT_NAME,
+                "exec",
+                service,
+                shell_cmd,
+            ]
+        )
 
     except KeyboardInterrupt:
         console.print("\n[yellow]Disconnected.[/]")
@@ -493,7 +584,9 @@ def local_shell(
 
 @local_app.command(name="restart")
 def local_restart(
-    service: Annotated[Optional[str], typer.Argument(help="Service name (omit to restart all)")] = None,
+    service: Annotated[
+        Optional[str], typer.Argument(help="Service name (omit to restart all)")
+    ] = None,
 ) -> None:
     """Restart service(s) in the local stack."""
     try:
