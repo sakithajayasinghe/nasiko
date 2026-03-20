@@ -23,7 +23,7 @@
 
 ## 🌟 What is Nasiko?
 
-Nasiko is an enterprise-grade AI agent orchestration platform that transforms how you build, deploy, and manage AI agents at scale. Built with modern microservices architecture, Nasiko provides everything needed to run production AI agent ecosystems.
+Nasiko is a developer control plane that transforms how you build, deploy, and manage AI agents at scale. Built with modern microservices architecture, Nasiko provides everything needed to run production AI agent ecosystems.
 
 ### 🎯 Core Capabilities
 
