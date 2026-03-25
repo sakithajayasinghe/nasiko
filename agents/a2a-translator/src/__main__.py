@@ -28,12 +28,24 @@ logging.basicConfig()
 @click.option("--host", "host", default="localhost")
 @click.option("--port", "port", default=5000)
 def main(host: str, port: int):
-    api_key = os.getenv("OPENROUTER_API_KEY")
-    base_url = "https://openrouter.ai/api/v1"
-    model = os.getenv("OPENROUTER_MODEL", "nvidia/nemotron-3-super-120b-a12b:free")
+    base_url = None
+    model = "gpt-4o"
+
+    if os.getenv("OPENROUTER_API_KEY"):
+        api_key = os.getenv("OPENROUTER_API_KEY")
+        base_url = "https://openrouter.ai/api/v1"
+        model = os.getenv("OPENROUTER_MODEL", "nvidia/nemotron-3-super-120b-a12b:free")
+    elif os.getenv("MINIMAX_API_KEY"):
+        api_key = os.getenv("MINIMAX_API_KEY")
+        base_url = os.getenv("MINIMAX_BASE_URL", "https://api.minimax.io/v1")
+        model = os.getenv("MINIMAX_MODEL", "MiniMax-M2.7")
+    else:
+        api_key = os.getenv("OPENAI_API_KEY")
 
     if not api_key:
-        raise ValueError("OPENROUTER_API_KEY environment variable must be set")
+        raise ValueError(
+            "One of OPENROUTER_API_KEY, OPENAI_API_KEY, or MINIMAX_API_KEY must be set"
+        )
 
     skill = AgentSkill(
         id="translator_agent",
