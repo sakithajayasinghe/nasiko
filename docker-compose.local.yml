@@ -311,7 +311,7 @@ services:
   # WEB FRONTEND LAYER
   # ============================================================================
   nasiko-web:
-    image: docker.io/karannasiko/nasiko-web:latest
+    image: docker.io/karannasiko/nasiko-web:oss
     platform: linux/amd64
     container_name: nasiko-web
     restart: unless-stopped
