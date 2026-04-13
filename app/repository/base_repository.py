@@ -27,7 +27,9 @@ class BaseRepository(ABC):
             raise ValueError(error_msg)
 
         try:
-            return base64.urlsafe_b64decode(env_key.encode())
+            key_bytes = env_key.encode()
+            cryptography.fernet.Fernet(key_bytes)  # validate
+            return key_bytes
         except Exception as e:
             error_msg = f"Invalid encryption key in USER_CREDENTIALS_ENCRYPTION_KEY environment variable: {e}"
             self.logger.error(error_msg)
