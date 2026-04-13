@@ -658,7 +658,7 @@ class ObservabilityService:
         query = """
         query SessionDetailsQuery(
           $id: ID!
-          $first: Int
+          $first: Int!
         ) {
           session: node(id: $id) {
             __typename

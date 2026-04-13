@@ -36,18 +36,7 @@ RUN mkdir -p /app/app/utils && \
     touch /app/app/utils/__init__.py
 
 # Install Python dependencies including observability components
-RUN pip install --no-cache-dir uv && \
-    uv pip install --system -r /app/orchestrator/requirements.txt 2>/dev/null || \
-    pip install --no-cache-dir pyyaml redis docker requests && \
-    pip install --no-cache-dir \
-        langtrace-python-sdk>=3.8.21 \
-        opentelemetry-distro>=0.57b0 \
-        opentelemetry-exporter-otlp>=1.36.0 \
-        opentelemetry-instrumentation-asgi>=0.57b0 \
-        opentelemetry-instrumentation-fastapi>=0.57b0 \
-        opentelemetry-exporter-otlp-proto-http>=1.36.0 \
-        arize-phoenix>=5.16.0 \
-        astor>=0.8.1
+RUN pip install --no-cache-dir -r /app/orchestrator/requirements.txt
 
 # Create non-root user for security (kept for potential future use)
 RUN useradd -m -u 1000 worker && chown -R worker:worker /app
