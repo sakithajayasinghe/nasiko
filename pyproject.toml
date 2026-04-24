@@ -1,7 +1,7 @@
 [project]
-name = "arithmic-nasiko"
+name = "nasiko"
 version = "0.0.1"
-description = "nasiko registry something"
+description = "Nasiko Registry"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
