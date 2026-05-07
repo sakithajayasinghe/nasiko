@@ -399,7 +399,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./agents:/app/agents:ro
       - ./orchestrator:/app/orchestrator:ro
-      - /tmp/agent-builds:/tmp/agent-builds
     networks:
       - app-network
       - agents-net
