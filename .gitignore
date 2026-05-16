@@ -159,6 +159,7 @@ cython_debug/
 
 # macOS files
 .DS_Store
+*.dmg
 
 # Sensitive credentials
 superuser_credentials.json
