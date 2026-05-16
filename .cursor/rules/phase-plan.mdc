@@ -1,0 +1,85 @@
+---
+description: Plan phase rule. Use AFTER research is persisted and BEFORE writing code. Loads when the task involves designing an approach, breaking work into tasks, defining acceptance criteria, scoping a feature, or producing an implementation plan. Outputs a persisted plan in vault/plans/<slug>.md.
+---
+
+# Phase 2 — Plan
+
+Use this rule after the Research phase note exists with `status: active` or `done`, and before any code is written. Triggered by user phrases like "plan", "design", "break down", "scope", "what's the approach", "let's plan this".
+
+## Gate check (do this first)
+
+Open `vault/research/<slug>.md`.
+
+- If it doesn't exist → stop. Tell the user research is missing and offer to enter the Research phase.
+- If it exists but `status: draft` → stop. Tell the user research isn't finalized.
+- Otherwise proceed.
+
+## Output
+
+| Field | Value |
+|-------|-------|
+| Path | `vault/plans/<slug>.md` |
+| Template | `vault/templates/plan.md` |
+| Frontmatter `type` | `plan` |
+| Status on create | `draft` |
+| Status when complete | `active` (→ `done` after execution wraps) |
+
+## Required sections (in order)
+
+1. **Summary** — one paragraph: what we'll build and why
+2. **Research basis** — `Research: [[../research/<slug>]]` plus a 3–5 bullet recap of what the research established
+3. **Decision** — the chosen option from research, with one-line justification referencing findings
+4. **Scope**
+   - In scope
+   - Out of scope (non-goals)
+5. **Architecture / approach** — components touched, data flow, new modules/endpoints; use a mermaid diagram if more than two components interact
+6. **Affected code** — table of `path` → change type (new / edit / delete)
+7. **Task breakdown** — numbered checklist with rough effort tags (S/M/L or hours)
+8. **Acceptance criteria** — numbered, testable; the Execute phase will tick these off
+9. **Risks & mitigations** — table of `risk` → `mitigation` → `trigger to abort`
+10. **Open questions** — anything still unresolved; flag if they block execution
+11. **Rollback / fallback** — how we undo or pivot if execution fails midway
+12. **Related** — wiki-links (research, ADRs, architecture, feature note)
+13. **Log** — `YYYY-MM-DD — plan drafted/accepted`
+
+## Required frontmatter
+
+```yaml
+---
+title: "Plan — <human-readable topic>"
+type: plan
+status: draft
+tags: [nasiko, plan, ai/created]
+slug: <kebab-slug>
+research: "[[../research/<slug>]]"
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
+---
+```
+
+## Done criteria (gate to Execute)
+
+- All required sections present
+- Task breakdown has concrete, checkable items (not vague "implement feature")
+- Acceptance criteria are numbered and testable
+- Risks each have a mitigation
+- Status set to `active`
+- Note linked from `vault/plans/_index.md`
+- Decisions that are hard to reverse have a corresponding ADR draft in `vault/decisions/` (or a note explaining why none is needed)
+
+## ADR rule
+
+If the plan locks in any of: new external dependency, new service boundary, schema change, public API change, security/auth model change — open a new ADR (`vault/decisions/NNNN-<slug>.md`) using `vault/templates/adr.md` and link it from the plan's Related section.
+
+## Behavior in chat
+
+- Quote the research's Findings section by reference, don't repeat it
+- Be specific about file paths; verify with the workspace
+- If the user pushes back on a task or acceptance item, update the plan and bump `updated`
+
+## Hand-off
+
+When plan is `active`, say to the user:
+> Plan ready: `vault/plans/<slug>.md`. Acceptance criteria + tasks locked. Start Execute phase?
+
+Do not write or edit code until the user confirms.

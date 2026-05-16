@@ -19,6 +19,7 @@ downloads/
 eggs/
 .eggs/
 lib/
+!web/metrics-dashboard/lib/
 lib64/
 parts/
 sdist/

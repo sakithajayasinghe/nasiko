@@ -1,0 +1,69 @@
+---
+description: Enforce Research → Plan → Execute phase gates for non-trivial feature work; each phase persists its output to the Obsidian vault before the next begins
+alwaysApply: true
+---
+
+# Phased Development Workflow (Nasiko)
+
+Non-trivial work (multi-file, new service, unclear requirements, anything tagged hackathon, feature, or ADR-worthy) must move through three gated phases. Each phase **must persist its output to the vault before the next phase begins.**
+
+## Phases and gates
+
+| Order | Phase | Persists to | Detail rule |
+|-------|-------|-------------|-------------|
+| 1 | **Research** — explore the problem, constraints, prior art, data sources | `vault/research/<slug>.md` | `phase-research` |
+| 2 | **Plan** — design, scope, tasks, acceptance, risks | `vault/plans/<slug>.md` | `phase-plan` |
+| 3 | **Execute** — implement, test, log decisions | `vault/sessions/<YYYY-MM-DD>-<slug>.md` (+ ADR if needed) | `phase-execute` |
+
+`<slug>` is the kebab-case feature slug matching `vault/features/<slug>.md` when one exists.
+
+## Phase gate (hard rule)
+
+Before starting a phase, **verify the prior phase's note exists and is not still in `status: draft`.** If it doesn't exist:
+
+1. Stop.
+2. Tell the user which phase note is missing.
+3. Offer to enter that earlier phase now.
+
+Never skip a phase silently. Never write code without a persisted plan note.
+
+## Trigger
+
+Treat a request as "non-trivial" — and therefore subject to this workflow — when any of the following are true:
+- Touches more than one file or service
+- Adds a new endpoint, page, table, or external dependency
+- Has open questions about requirements, data shape, or stack
+- The user uses words like "build", "implement", "design", "research", "plan", "ship"
+
+For trivial work (typo, single-line bug, formatting, doc tweak) skip the workflow unless the user asks for it.
+
+## How to invoke a phase
+
+Reference the detail rule for each phase to load full conventions:
+- Research → see `phase-research`
+- Plan → see `phase-plan`
+- Execute → see `phase-execute`
+
+Each phase rule defines its own template, frontmatter, required sections, and "done" criteria.
+
+## Status lifecycle per phase note
+
+`draft` → `active` → `done`. Only `done` clears the gate to the next phase. A superseded plan or research note keeps `status: superseded` and links forward.
+
+## Crosslinks (required)
+
+- Plan note links back to its research note: `Research: [[../research/<slug>]]`
+- Execution session links back to its plan: `Plan: [[../plans/<slug>]]`
+- Feature note (if any) lists the three companions at the top:
+  ```
+  Research: [[../research/<slug>]] · Plan: [[../plans/<slug>]] · Execution: [[../sessions/<YYYY-MM-DD>-<slug>]]
+  ```
+
+## Related rules
+
+- `obsidian-knowledge-base` — vault conventions (auto-attaches on `vault/**/*.md`)
+- `knowledge-base-sync` — when to consult and update the vault
+
+## Why this exists
+
+The vault is the source of truth for **why and how**. Phasing forces that knowledge to be written down before code is touched, so future agents and humans can reconstruct intent without reading diffs.

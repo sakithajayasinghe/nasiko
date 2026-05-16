@@ -1,0 +1,84 @@
+---
+description: Execute phase rule. Use AFTER a plan note is persisted as active. Loads when the task involves writing code, running commands, editing files, or shipping a feature. Logs progress to a vault session note and updates the plan checklist as tasks complete.
+---
+
+# Phase 3 — Execute
+
+Use this rule only after `vault/plans/<slug>.md` has `status: active`. Triggered when the user says "implement", "ship", "build it", "let's code", "start execution", "do the plan".
+
+## Gate check (do this first)
+
+Open `vault/plans/<slug>.md`.
+
+- If it doesn't exist → stop. Offer to enter the Plan phase.
+- If `status: draft` → stop. Plan is not finalized.
+- Otherwise proceed.
+
+## Output
+
+| Field | Value |
+|-------|-------|
+| Path | `vault/sessions/<YYYY-MM-DD>-<slug>.md` |
+| Template | `vault/templates/execution.md` |
+| Frontmatter `type` | `session` |
+| Status on create | `active` |
+| Status at end | `done` |
+
+One execution note per working day. If execution spans multiple days, create one note per day and chain them with `Continues: [[<prev-date>-<slug>]]`.
+
+## Required sections (in order)
+
+1. **Plan link** — `Plan: [[../plans/<slug>]]` plus the plan's status and date
+2. **Goal for this session** — which tasks from the plan we intend to close
+3. **Timeline log** — append-only timestamped entries (`HH:MM — what happened`). Capture: files edited, commands run, results, surprises. Do not rewrite earlier entries.
+4. **Decisions made mid-flight** — any departure from the plan; if a decision is hard to reverse, open or update an ADR and link it here
+5. **Acceptance criteria status** — copy the plan's numbered criteria and tick them as evidence arrives (link to code/tests/screenshots)
+6. **Tests & verification** — what we ran, what passed, what failed; raw output excerpts ok
+7. **Follow-ups** — anything discovered that's out of scope for this plan; convert into backlog items in `vault/features/_index.md`
+8. **Related** — wiki-links (plan, research, ADRs, feature note)
+9. **End-of-session summary** — one paragraph: what shipped, what's left, what's blocked
+
+## Required frontmatter
+
+```yaml
+---
+title: "Execution — <slug> — <YYYY-MM-DD>"
+type: session
+status: active
+tags: [nasiko, execution, session, ai/created]
+slug: <kebab-slug>
+plan: "[[../plans/<slug>]]"
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
+---
+```
+
+## During execution (rules)
+
+- **Append-only timeline.** Never rewrite earlier timeline entries — add new ones with a later timestamp.
+- **Update the plan's task checklist** in `vault/plans/<slug>.md` as items close. Don't delete unchecked items — strike them or move them to Follow-ups.
+- **One ADR per hard-to-reverse decision** taken mid-execute. Use `vault/templates/adr.md`. Link from this session and from `vault/decisions/_index.md`.
+- **Verify before claiming done.** Run tests, lint, build, or whatever the plan's acceptance criteria specify. Paste evidence into Tests & verification.
+- **Do not silently change scope.** If you must, log it under Decisions made mid-flight and ping the user.
+
+## Done criteria (close the phase)
+
+- All in-scope acceptance criteria ticked with evidence, OR explicitly marked deferred under Follow-ups
+- Plan note status updated to `done` (or `superseded` if scope drifted hard)
+- This session's status set to `done`
+- End-of-session summary written
+- Feature note (if any) status updated: `done` or back to `active` with remaining tasks
+- `vault/index.md` log updated with one line pointing at this session
+
+## Hand-off
+
+When execution closes, say to the user:
+> Execution closed: `vault/sessions/<YYYY-MM-DD>-<slug>.md`. Plan `done`. <N> follow-ups logged.
+
+Offer next actions: open the PR, run a wider test pass, or start a new Research phase for follow-ups.
+
+## Behavior in chat
+
+- Edit files directly; do not paste large code blobs into chat that the user must reapply
+- After substantial edits, summarize what changed in one paragraph plus the file list — do not re-narrate every diff
+- If something breaks the plan's gate (e.g., a risk's "trigger to abort" fires), stop and tell the user before continuing

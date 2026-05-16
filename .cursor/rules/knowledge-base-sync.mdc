@@ -11,8 +11,10 @@ When the user asks to plan, design, or implement a **non-trivial** feature (mult
 
 1. **Consult** `vault/index.md` and linked notes under `vault/features/` and `vault/architecture/` before editing code.
 2. **Propose** creating or updating a feature note if none exists; follow `obsidian-knowledge-base` rules in `vault/**/*.md`.
-3. **After** substantial implementation, offer to update the feature note, add an ADR for durable decisions, and refresh cross-links in `vault/index.md`.
+3. **Run the phased workflow** — see rule **phased-development**. Non-trivial work goes Research → Plan → Execute, with each phase persisting a note in the vault before the next begins.
+4. **After** substantial implementation, offer to update the feature note, add an ADR for durable decisions, and refresh cross-links in `vault/index.md`.
 
-For small fixes (typos, single-line bugs, formatting), skip vault updates unless the user asks.
+For small fixes (typos, single-line bugs, formatting), skip vault updates and the phased workflow unless the user asks.
 
 Detailed vault conventions: see rule **obsidian-knowledge-base** (applies when editing `vault/**/*.md`).
+Detailed phase conventions: see rules **phase-research**, **phase-plan**, **phase-execute**.

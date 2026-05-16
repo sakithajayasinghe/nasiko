@@ -1,0 +1,74 @@
+---
+description: Research phase rule. Use BEFORE planning or implementing a feature. Loads when the task involves discovery, exploring code/docs/APIs, comparing options, or evaluating prior art. Outputs a persisted research note in vault/research/<slug>.md that the Plan phase will consume.
+---
+
+# Phase 1 — Research
+
+Use this rule when starting a new non-trivial feature, hackathon track, ADR-worthy decision, or whenever the user says "research", "explore", "investigate", "compare options", or asks an open-ended "how should we…".
+
+This phase produces a **persisted research note**. Do not enter the Plan phase until this note has `status: active` or `done`.
+
+## Output
+
+| Field | Value |
+|-------|-------|
+| Path | `vault/research/<slug>.md` |
+| Template | `vault/templates/research.md` |
+| Frontmatter `type` | `research` |
+| Status on create | `draft` |
+| Status when complete | `active` (then `done` after Plan consumes it) |
+
+`<slug>` is kebab-case. Reuse the feature slug if `vault/features/<slug>.md` already exists.
+
+## What "research" means here
+
+Reconnaissance, not commitment. Read code, docs, vault notes, web sources. **No design decisions yet** — those belong in the Plan phase. The output is *evidence*, not a solution.
+
+## Required sections (in order)
+
+1. **Question** — one sentence stating what we're trying to learn
+2. **Why now** — what triggered this; link to feature/ADR/hackathon note
+3. **Sources consulted** — bulleted list with paths or URLs (code paths in backticks, web links as markdown links). Cite specifics, not "the codebase".
+4. **Findings** — what we know now, grouped by sub-question. Mark each as Confirmed / Likely / Unknown.
+5. **Options surfaced** — list the realistic options with one-line pros/cons. Do **not** pick yet.
+6. **Open questions** — what's still unknown going into Plan
+7. **Risks & unknowns** — what could break the Plan phase
+8. **Related** — wiki-links to architecture, features, ADRs
+9. **Log** — `YYYY-MM-DD — research started/updated`
+
+## Required frontmatter
+
+```yaml
+---
+title: "Research — <human-readable topic>"
+type: research
+status: draft
+tags: [nasiko, research, ai/created]
+slug: <kebab-slug>
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
+---
+```
+
+## Done criteria (gate to Plan)
+
+- All sections above present and non-empty (Open questions may be empty if truly none)
+- At least one source per finding
+- Status set to `active`
+- Note linked from `vault/research/_index.md`
+- If a feature note exists, the `Research:` crosslink at its top points here
+
+## Behavior in chat
+
+- Read `vault/index.md` and any existing `vault/features/<slug>.md` first
+- Use Cursor `@vault/...` references to pull prior notes into context
+- When citing code, use repo-relative paths in backticks (e.g. `app/api/routes/observability_routes.py`)
+- Never invent file paths — verify with the workspace
+- Web sources go in the Sources section as `[Title](URL)`
+
+## Hand-off
+
+When research is `active`, say to the user:
+> Research note ready: `vault/research/<slug>.md`. Move to Plan phase?
+
+Do not proceed to Plan without explicit user confirmation or a clear request.

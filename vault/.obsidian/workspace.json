@@ -13,28 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Welcome.md",
+                "file": "sessions/2026-05-16-challenge-2-agent-metrics-page.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Welcome"
-            }
-          }
-        ]
-      },
-      {
-        "id": "07224fa3a41b2a45",
-        "type": "tabs",
-        "children": [
-          {
-            "id": "257fe603f8674639",
-            "type": "leaf",
-            "state": {
-              "type": "graph",
-              "state": {},
-              "icon": "lucide-git-fork",
-              "title": "Graph view"
+              "title": "2026-05-16-challenge-2-agent-metrics-page"
             }
           }
         ]
@@ -110,7 +94,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "Welcome.md",
+                "file": "sessions/2026-05-16-challenge-2-agent-metrics-page.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -120,7 +104,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for Welcome"
+              "title": "Backlinks for 2026-05-16-challenge-2-agent-metrics-page"
             }
           },
           {
@@ -129,12 +113,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "Welcome.md",
+                "file": "sessions/2026-05-16-challenge-2-agent-metrics-page.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from Welcome"
+              "title": "Outgoing links from 2026-05-16-challenge-2-agent-metrics-page"
             }
           },
           {
@@ -172,13 +156,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Welcome.md",
+                "file": "sessions/2026-05-16-challenge-2-agent-metrics-page.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of Welcome"
+              "title": "Outline of 2026-05-16-challenge-2-agent-metrics-page"
             }
           }
         ]
@@ -201,17 +185,39 @@
   },
   "active": "764a4926fc6b2285",
   "lastOpenFiles": [
-    "reference/_index.md",
-    "reference",
-    "decisions/_index.md",
-    "decisions",
-    "features/_index.md",
-    "features",
+    "reference/metrics-dashboard-dev.md",
+    "research/challenge-2-agent-metrics-page.md",
+    "sessions/2026-05-16-challenge-2-agent-metrics-page.md",
+    "reference/phased-development-workflow.md",
+    "reference/task-breakdown-method.md",
+    "plans/challenge-2-agent-metrics-page.md",
+    "research/_index.md",
+    "features/hackathon-titan-builder-challenge.md",
+    "reference/cursor-rules-how-to.md",
+    "plans/_index.md",
+    "plans",
+    "research",
+    "templates/execution.md",
+    "templates/plan.md",
+    "templates/research.md",
+    "features/challenge-2-agent-metrics-page.md",
+    "decisions/0002-hackathon-pick-challenge-2.md",
+    "features/challenge-1-logging-dashboard.md",
     "architecture/overview.md",
+    "sessions/README.md",
+    "sessions",
+    "templates/adr.md",
+    "decisions/0001-vault-in-repo.md",
+    "reference/troubleshooting.md",
+    "reference/sample-agents.md",
+    "reference/cli-cheatsheet.md",
+    "reference/environment-variables.md",
+    "architecture/agent-deployment-flow.md",
+    "reference/local-development.md",
+    "reference",
+    "decisions",
+    "features",
     "architecture",
-    "templates/feature.md",
-    "templates",
-    "index.md",
-    "Welcome.md"
+    "templates"
   ]
 }

@@ -9,12 +9,14 @@ updated: 2026-05-16
 
 # Architecture Decision Records
 
-Numbered ADRs in this folder: `NNNN-short-title.md`.
+Numbered files: `NNNN-short-title.md`. Supersede; do not delete.
 
-## Records
-
-_None yet._
+| ADR | Title | Status |
+|-----|-------|--------|
+| [[0001-vault-in-repo]] | Obsidian vault in repository | Accepted |
+| [[0002-hackathon-pick-challenge-2]] | Hackathon pick: Challenge 2 (Agent Performance Metrics Page) | Accepted |
 
 ## Log
 
-- 2026-05-16 — ADR index created
+- 2026-05-16 — ADR 0002 added (hackathon pick)
+- 2026-05-16 — ADR 0001 added
