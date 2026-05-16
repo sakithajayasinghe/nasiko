@@ -136,3 +136,24 @@ export function fetchNasikoObservabilitySessions(
     },
   );
 }
+
+export function fetchNasikoSessionDetails(
+  authorization: string,
+  sessionId: string,
+): Promise<unknown> {
+  return nasikoFetch(
+    `/api/v1/observability/session/${encodeURIComponent(sessionId)}`,
+    { authorization },
+  );
+}
+
+export function fetchNasikoTraceDetails(
+  authorization: string,
+  projectId: string,
+  traceId: string,
+): Promise<unknown> {
+  return nasikoFetch(
+    `/api/v1/observability/trace/${encodeURIComponent(projectId)}/${encodeURIComponent(traceId)}`,
+    { authorization },
+  );
+}

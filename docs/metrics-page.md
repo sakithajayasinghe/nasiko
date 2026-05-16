@@ -10,11 +10,29 @@
 A logged-in user opens `/app/metrics/`, selects one of their deployed agents,
 and sees:
 
-- **Avg response time** — p50 latency over the last 24 hours
-- **Success / errors** — session outcomes over the last 24 hours
-- **Uptime %** — health-poll based rolling 24-hour availability
-- **Latency chart** — 24 hourly buckets, each with the bucket's p50 latency plus
-  the success and error counts shown in the hover tooltip
+- **Typical response time** — p50 latency over the last 24 hours, with a small
+  inline sparkline showing the 24-hour trend right inside the KPI card
+- **Successful / failed requests** — session outcomes over the last 24 hours
+- **Availability** — health-poll based rolling 24-hour uptime
+- **Estimated cost** — AI usage cost over the last 24 hours, with a tiny
+  prompt-vs-completion split bar (when Phoenix reports both halves)
+- **User feedback** — *only renders when annotations exist*. Aggregates the
+  mean score and label distribution from
+  `session_annotation_summaries` (e.g. thumbs-up / thumbs-down ratings).
+  The label distribution renders as a stacked sentiment bar with tonal colors
+  inferred from common label keywords.
+- **Avg steps per request** — *only renders when sessions report `num_traces`*.
+  Mean orchestration depth = total spans/traces ÷ sessions in window. A proxy
+  for tool-call complexity.
+- **Traffic chart** — stacked bars per hour, green for successful requests and
+  red for failed ones. The tooltip on hover shows the bucket's total, the
+  success/error split, and the typical response time for context.
+
+The traffic chart was chosen over a single latency line because for many agents
+response time is stable across the day — a flat line under-sells real activity.
+A stacked bar of requests-per-hour makes traffic patterns and error spikes
+visible at a glance, while the sparkline inside the latency KPI card keeps the
+"is response time drifting?" answer one glance away.
 
 The dashboard auto-refreshes every 60 seconds when the toggle is on, and the
 toolbar's "Updated Xs ago" pill reflects the time since the last successful fetch.
@@ -176,8 +194,11 @@ npm run smoke                # bash smoke test (needs NASIKO_BEARER_TOKEN)
 | `web/metrics-dashboard/app/api/agents/route.ts` | `GET /api/agents` |
 | `web/metrics-dashboard/app/api/metrics/route.ts` | `GET /api/metrics` |
 | `web/metrics-dashboard/components/MetricsDashboard.tsx` | Top-level UI shell |
-| `web/metrics-dashboard/components/KpiCards.tsx` | Four KPI cards |
-| `web/metrics-dashboard/components/LatencyChart.tsx` | Recharts 24h line |
+| `web/metrics-dashboard/components/KpiCards.tsx` | KPI cards (5 always + 2 conditional Tier-B) |
+| `web/metrics-dashboard/components/LatencySparkline.tsx` | Small 24h area chart inside the latency KPI card |
+| `web/metrics-dashboard/components/CostSplit.tsx` | Prompt vs completion mini-bar inside the cost KPI card |
+| `web/metrics-dashboard/components/FeedbackBar.tsx` | Label-distribution stacked bar inside the feedback KPI card |
+| `web/metrics-dashboard/components/TrafficChart.tsx` | Main panel: stacked success/error bars per hour |
 | `web/metrics-dashboard/components/metrics-dashboard.css` | Dashboard styles |
 | `web/metrics-dashboard/lib/nasiko.ts` | Server-side Nasiko fetch helper |
 | `web/metrics-dashboard/lib/rollup.ts` | Sessions → KPIs + 24h bucket logic |

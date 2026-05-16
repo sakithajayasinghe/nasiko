@@ -5,7 +5,7 @@
 import type { AgentMetricsResponse, MetricsHourlyPoint } from "@/lib/types";
 import { buildHourlyBuckets } from "@/lib/rollup";
 
-const SUPPORTED_WINDOWS = new Set(["24h"]);
+const SUPPORTED_WINDOWS = new Set(["1h", "24h", "7d"]);
 
 export function parseMetricsWindow(
   raw: string | null,
@@ -16,7 +16,8 @@ export function parseMetricsWindow(
       error: `Unsupported window "${window}". Supported: ${[...SUPPORTED_WINDOWS].join(", ")}`,
     };
   }
-  const hours = window === "24h" ? 24 : 24;
+  const hours =
+    window === "1h" ? 1 : window === "7d" ? 24 * 7 : 24;
   return { window, hours };
 }
 

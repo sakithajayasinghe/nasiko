@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import { getBearerAuthForNasiko, unauthorizedResponse } from "@/lib/auth";
-import {
-  computeStartTimeIso,
-  emptyAgentMetrics,
-  parseMetricsWindow,
-} from "@/lib/metrics";
+import { emptyAgentMetrics } from "@/lib/metrics";
+import { filterNasikoSessionsInRange } from "@/lib/session-filters";
+import { parseTimeRangeQuery } from "@/lib/time-range";
 import {
   fetchNasikoAgentStats,
   fetchNasikoObservabilitySessions,
@@ -33,12 +31,12 @@ export async function GET(request: Request) {
     );
   }
 
-  const windowResult = parseMetricsWindow(searchParams.get("window"));
-  if ("error" in windowResult) {
-    return NextResponse.json({ error: windowResult.error }, { status: 400 });
+  const rangeResult = parseTimeRangeQuery(searchParams);
+  if ("error" in rangeResult) {
+    return NextResponse.json({ error: rangeResult.error }, { status: 400 });
   }
-
-  const startTimeIso = computeStartTimeIso(windowResult.hours);
+  const range = rangeResult;
+  const startTimeIso = range.startTimeIso;
 
   try {
     const [statsResponse, sessionsResponse, uptimeResult] = await Promise.all([
@@ -61,18 +59,21 @@ export async function GET(request: Request) {
       );
     }
 
-    const sessions = (sessionsResponse.data?.sessions ?? []).filter(
-      (s) => s.agent_id === agent,
+    const sessions = filterNasikoSessionsInRange(
+      (sessionsResponse.data?.sessions ?? []).filter((s) => s.agent_id === agent),
+      range.startMs,
+      range.endMs,
     );
 
     const metrics = buildAgentMetrics({
       agentId: agent,
-      window: windowResult.window,
-      hours: windowResult.hours,
+      window: range.window,
+      hours: range.hours,
       project,
       sessions,
       uptimePct: uptimeResult.uptimePct,
       uptimeMeta: uptimeResult.meta,
+      now: range.endMs,
     });
 
     return NextResponse.json(metrics);
@@ -102,7 +103,7 @@ export async function GET(request: Request) {
           return NextResponse.json(
             emptyAgentMetrics(
               agent,
-              windowResult.window,
+              range.window,
               "No Phoenix traces yet for this agent. Use the agent in the main UI (chat or A2A) once; Phoenix creates project '" +
                 agent +
                 "' on first span.",

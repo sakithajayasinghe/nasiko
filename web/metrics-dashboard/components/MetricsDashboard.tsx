@@ -1,15 +1,35 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { fetchAgentMetrics, fetchAgents, MetricsApiError } from "@/lib/api-client";
+import Link from "next/link";
+import {
+  fetchAgentMetrics,
+  fetchAgentSessions,
+  fetchAgents,
+  fetchSessionDetail,
+  fetchTraceGraph,
+  MetricsApiError,
+} from "@/lib/api-client";
 import {
   clearDevAccessToken,
   getAccessTokenFromStorage,
   setDevAccessToken,
 } from "@/lib/auth-client";
-import type { AgentMetricsResponse, MetricsAgentOption } from "@/lib/types";
+import { pickPrimaryTrace } from "@/lib/sessions";
+import type {
+  AgentMetricsResponse,
+  MetricsAgentOption,
+  MetricsSessionRow,
+  TraceDetailResponse,
+} from "@/lib/types";
+import { AgentsOverviewTable } from "@/components/AgentsOverviewTable";
+import { DashboardNav, type DashboardView } from "@/components/DashboardNav";
 import { KpiCards } from "@/components/KpiCards";
-import { LatencyChart } from "@/components/LatencyChart";
+import { TrafficChart } from "@/components/TrafficChart";
+import { MetricsTimeRangeBar } from "@/components/MetricsTimeRangeBar";
+import { RequestTracesWorkspace } from "@/components/RequestTracesWorkspace";
+import { aggregateFleetMetrics, type FleetAgentRow } from "@/lib/fleet-rollup";
+import { defaultTimeRange, type MetricsTimeRange } from "@/lib/time-range";
 import "./metrics-dashboard.css";
 
 const NASIKO_APP_URL =
@@ -41,6 +61,23 @@ export function MetricsDashboard() {
   const [devTokenInput, setDevTokenInput] = useState("");
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [now, setNow] = useState(() => new Date());
+  const [sessions, setSessions] = useState<MetricsSessionRow[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [trace, setTrace] = useState<TraceDetailResponse | null>(null);
+  const [traceLoading, setTraceLoading] = useState(false);
+  const [traceError, setTraceError] = useState<string | null>(null);
+  const [traceLoadingSessionId, setTraceLoadingSessionId] = useState<string | null>(
+    null,
+  );
+  const [dashboardView, setDashboardView] = useState<DashboardView>("agent");
+  const [fleetMetrics, setFleetMetrics] = useState<AgentMetricsResponse | null>(
+    null,
+  );
+  const [fleetRows, setFleetRows] = useState<FleetAgentRow[]>([]);
+  const [timeRange, setTimeRange] = useState<MetricsTimeRange>(() =>
+    defaultTimeRange(),
+  );
 
   const refreshRef = useRef<() => void>(() => {});
 
@@ -65,17 +102,90 @@ export function MetricsDashboard() {
     return list;
   }, []);
 
+  const loadSessions = useCallback(
+    async (
+      accessToken: string,
+      agentId: string,
+      range: MetricsTimeRange,
+    ) => {
+      if (!agentId) {
+        setSessions([]);
+        return;
+      }
+      setSessionsLoading(true);
+      try {
+        const data = await fetchAgentSessions(accessToken, agentId, range);
+        setSessions(data.sessions);
+      } catch {
+        setSessions([]);
+      } finally {
+        setSessionsLoading(false);
+      }
+    },
+    [],
+  );
+
   const loadMetrics = useCallback(
-    async (accessToken: string, agentId: string) => {
+    async (
+      accessToken: string,
+      agentId: string,
+      range: MetricsTimeRange,
+    ) => {
       if (!agentId) {
         setMetrics(null);
         return;
       }
-      const data = await fetchAgentMetrics(accessToken, agentId, "24h");
+      const data = await fetchAgentMetrics(accessToken, agentId, range);
       setMetrics(data);
       setLastUpdated(new Date());
+      await loadSessions(accessToken, agentId, range);
     },
-    [],
+    [loadSessions],
+  );
+
+  const handleViewTrace = useCallback(
+    async (sessionId: string) => {
+      const accessToken = resolveToken();
+      if (!accessToken || !selectedAgentId) {
+        return;
+      }
+      setSelectedSessionId(sessionId);
+      setTraceLoading(true);
+      setTraceLoadingSessionId(sessionId);
+      setTraceError(null);
+      setTrace(null);
+      try {
+        const session = await fetchSessionDetail(
+          accessToken,
+          selectedAgentId,
+          sessionId,
+        );
+        const primary = pickPrimaryTrace(session.traces);
+        if (!primary?.trace_id) {
+          setTraceError("No traces found for this session.");
+          return;
+        }
+        const preview =
+          sessions.find((s) => s.session_id === sessionId)?.preview ?? null;
+        const graph = await fetchTraceGraph(
+          accessToken,
+          selectedAgentId,
+          primary.trace_id,
+          session.project_id ?? metrics?.source?.project_id,
+          "24h",
+          preview,
+        );
+        setTrace(graph);
+      } catch (err) {
+        setTraceError(
+          err instanceof Error ? err.message : "Failed to load trace graph",
+        );
+      } finally {
+        setTraceLoading(false);
+        setTraceLoadingSessionId(null);
+      }
+    },
+    [metrics?.source?.project_id, resolveToken, selectedAgentId, sessions],
   );
 
   const loadMetricsForAgent = useCallback(
@@ -83,7 +193,7 @@ export function MetricsDashboard() {
       setState("loading");
       setErrorMessage(null);
       try {
-        await loadMetrics(accessToken, agentId);
+        await loadMetrics(accessToken, agentId, timeRange);
         setState("ready");
       } catch (err) {
         if (err instanceof MetricsApiError && err.status === 401) {
@@ -97,7 +207,139 @@ export function MetricsDashboard() {
         );
       }
     },
-    [loadMetrics],
+    [loadMetrics, timeRange],
+  );
+
+  const loadFleetMetrics = useCallback(
+    async (
+      accessToken: string,
+      agentList: MetricsAgentOption[],
+      range: MetricsTimeRange,
+    ) => {
+      if (agentList.length === 0) {
+        setFleetMetrics(null);
+        setFleetRows([]);
+        setLastUpdated(new Date());
+        return;
+      }
+      const results = await Promise.all(
+        agentList.map((agent) =>
+          fetchAgentMetrics(accessToken, agent.agentId, range),
+        ),
+      );
+      const { aggregated, rows } = aggregateFleetMetrics(
+        agentList,
+        results,
+        range.window,
+      );
+      setFleetMetrics(aggregated);
+      setFleetRows(rows);
+      setLastUpdated(new Date());
+    },
+    [],
+  );
+
+  const loadFleetForView = useCallback(
+    async (accessToken: string) => {
+      setState("loading");
+      setErrorMessage(null);
+      try {
+        const list = await loadAgents(accessToken);
+        await loadFleetMetrics(accessToken, list, timeRange);
+        setState("ready");
+      } catch (err) {
+        if (err instanceof MetricsApiError && err.status === 401) {
+          setState("auth");
+          setErrorMessage("Session expired. Sign in again or paste a new token.");
+          return;
+        }
+        setState("error");
+        setErrorMessage(
+          err instanceof Error ? err.message : "Failed to load fleet metrics",
+        );
+      }
+    },
+    [loadAgents, loadFleetMetrics, timeRange],
+  );
+
+  const handleApplyTimeRange = useCallback(
+    async (range: MetricsTimeRange) => {
+      setTimeRange(range);
+      setSelectedSessionId(null);
+      setTrace(null);
+      setTraceError(null);
+      const accessToken = resolveToken();
+      if (!accessToken) {
+        return;
+      }
+      setState("loading");
+      setErrorMessage(null);
+      try {
+        if (dashboardView === "fleet") {
+          const list =
+            agents.length > 0 ? agents : await loadAgents(accessToken);
+          await loadFleetMetrics(accessToken, list, range);
+        } else if (selectedAgentId) {
+          await loadMetrics(accessToken, selectedAgentId, range);
+        }
+        setState("ready");
+      } catch (err) {
+        if (err instanceof MetricsApiError && err.status === 401) {
+          setState("auth");
+          setErrorMessage("Session expired. Sign in again or paste a new token.");
+          return;
+        }
+        setState("error");
+        setErrorMessage(
+          err instanceof Error ? err.message : "Failed to load data",
+        );
+      }
+    },
+    [
+      agents,
+      dashboardView,
+      loadAgents,
+      loadFleetMetrics,
+      loadMetrics,
+      resolveToken,
+      selectedAgentId,
+    ],
+  );
+
+  const handleDashboardViewChange = useCallback(
+    (view: DashboardView) => {
+      setDashboardView(view);
+      const accessToken = resolveToken();
+      if (!accessToken) {
+        return;
+      }
+      if (view === "fleet") {
+        void loadFleetForView(accessToken);
+      } else if (selectedAgentId) {
+        void loadMetricsForAgent(accessToken, selectedAgentId);
+      }
+    },
+    [
+      loadFleetForView,
+      loadMetricsForAgent,
+      resolveToken,
+      selectedAgentId,
+    ],
+  );
+
+  const handleDrillToAgent = useCallback(
+    (agentId: string) => {
+      setSelectedAgentId(agentId);
+      setSelectedSessionId(null);
+      setTrace(null);
+      setTraceError(null);
+      setDashboardView("agent");
+      const accessToken = resolveToken();
+      if (accessToken) {
+        void loadMetricsForAgent(accessToken, agentId);
+      }
+    },
+    [loadMetricsForAgent, resolveToken],
   );
 
   const refresh = useCallback(async () => {
@@ -112,6 +354,13 @@ export function MetricsDashboard() {
 
     try {
       const list = await loadAgents(accessToken);
+
+      if (dashboardView === "fleet") {
+        await loadFleetMetrics(accessToken, list, timeRange);
+        setState("ready");
+        return;
+      }
+
       const agentId =
         selectedAgentId && list.some((a) => a.agentId === selectedAgentId)
           ? selectedAgentId
@@ -123,7 +372,7 @@ export function MetricsDashboard() {
         return;
       }
 
-      await loadMetrics(accessToken, agentId);
+      await loadMetrics(accessToken, agentId, timeRange);
       setState("ready");
     } catch (err) {
       if (err instanceof MetricsApiError && err.status === 401) {
@@ -134,7 +383,15 @@ export function MetricsDashboard() {
       setState("error");
       setErrorMessage(err instanceof Error ? err.message : "Failed to load data");
     }
-  }, [loadAgents, loadMetrics, resolveToken, selectedAgentId]);
+  }, [
+    dashboardView,
+    loadAgents,
+    loadFleetMetrics,
+    loadMetrics,
+    resolveToken,
+    selectedAgentId,
+    timeRange,
+  ]);
 
   // Keep a stable ref so the auto-refresh interval doesn't re-bind on every render.
   useEffect(() => {
@@ -234,8 +491,10 @@ export function MetricsDashboard() {
     );
   }
 
+  const isFleetView = dashboardView === "fleet";
+  const displayMetrics = isFleetView ? fleetMetrics : metrics;
   const emptyAgents = state === "ready" && agents.length === 0;
-  const noData = metrics?.no_data === true;
+  const noData = displayMetrics?.no_data === true;
   const isLoading = state === "loading";
   const relativeLabel = formatRelative(lastUpdated, now);
   const absoluteLabel = lastUpdated ? lastUpdated.toLocaleTimeString() : "—";
@@ -245,14 +504,26 @@ export function MetricsDashboard() {
       <a href="#main" className="skip-link">Skip to dashboard</a>
       <main id="main" className="dashboard" aria-labelledby="dashboard-title">
         <header className="dashboard__header">
-          <p className="dashboard__eyebrow">Nasiko · Titan Builder Challenge</p>
-          <h1 id="dashboard-title" className="dashboard__title">Agent Metrics</h1>
+          <p className="dashboard__eyebrow">Nasiko agent performance</p>
+          <h1 id="dashboard-title" className="dashboard__title">
+            {isFleetView ? "How are your agents doing?" : "How is your agent doing?"}
+          </h1>
           <p className="dashboard__subtitle">
-            Per-agent latency, reliability, and uptime over the last 24 hours.
+            {isFleetView
+              ? "Fleet-wide health for the last 24 hours — totals across every deployed agent."
+              : "A simple health check for the last 24 hours — speed, success rate, and availability."}
           </p>
         </header>
 
+        <div className="dashboard-sections">
+          <DashboardNav view={dashboardView} onChange={handleDashboardViewChange} />
+          <Link href="/logs" className="dashboard-nav__link">
+            Platform logs →
+          </Link>
+        </div>
+
         <div className="toolbar" role="toolbar" aria-label="Dashboard controls">
+          {!isFleetView && (
           <div className="field">
             <label htmlFor="agent-select">Agent</label>
             <select
@@ -262,6 +533,9 @@ export function MetricsDashboard() {
               onChange={(e) => {
                 const id = e.target.value;
                 setSelectedAgentId(id);
+                setSelectedSessionId(null);
+                setTrace(null);
+                setTraceError(null);
                 if (token && id) {
                   void loadMetricsForAgent(token, id);
                 }
@@ -278,12 +552,13 @@ export function MetricsDashboard() {
               )}
             </select>
           </div>
+          )}
 
           <div className="toolbar__actions">
             <button
               type="button"
               className="btn btn--primary"
-              disabled={isLoading || !selectedAgentId}
+              disabled={isLoading || (!isFleetView && !selectedAgentId)}
               onClick={() => void refresh()}
               aria-label={isLoading ? "Refreshing metrics" : "Refresh metrics now"}
             >
@@ -359,36 +634,75 @@ export function MetricsDashboard() {
           </div>
         )}
 
+        <MetricsTimeRangeBar
+          range={timeRange}
+          onApply={(range) => void handleApplyTimeRange(range)}
+          disabled={isLoading || emptyAgents}
+        />
+
         {noData && (
           <div className="state-box" role="status" aria-live="polite" style={{ marginBottom: "1rem" }}>
-            <h2>No traffic yet for this agent</h2>
+            <h2>
+              {isFleetView ? "No activity across agents yet" : "No customer activity yet"}
+            </h2>
             <p>
-              {metrics?.message ??
-                "Send a message to this agent in the main Nasiko app — sessions and traces start arriving immediately, and the chart fills hourly."}
+              {displayMetrics?.message ??
+                (isFleetView
+                  ? "Once your agents handle requests, fleet totals and per-agent breakdowns appear here."
+                  : "Once people start using this agent in the main app, you will see speed, success rate, and recent requests here.")}
             </p>
             <p>
-              <a className="btn" href={NASIKO_APP_URL}>Chat with the agent</a>
+              <a className="btn" href={NASIKO_APP_URL}>
+                {isFleetView ? "Open main app" : "Chat with the agent"}
+              </a>
             </p>
           </div>
         )}
 
         <section aria-labelledby="kpi-heading" aria-busy={isLoading}>
-          <h2 id="kpi-heading" className="sr-only">Key performance indicators (last 24 hours)</h2>
-          <KpiCards metrics={metrics} loading={isLoading} noData={noData} />
+          <h2 id="kpi-heading" className="section-heading">
+            At a glance
+          </h2>
+          <KpiCards metrics={displayMetrics} loading={isLoading} noData={noData} />
         </section>
 
-        <section aria-labelledby="chart-heading" aria-busy={isLoading}>
-          <h2 id="chart-heading" className="sr-only">24-hour latency chart</h2>
-          <LatencyChart
-            series={metrics?.series_24h ?? []}
+        {isFleetView ? (
+          <AgentsOverviewTable
+            rows={fleetRows}
             loading={isLoading}
-            noData={noData}
+            onSelectAgent={handleDrillToAgent}
           />
-        </section>
+        ) : (
+          <>
+            <TrafficChart
+              series={metrics?.series_24h ?? []}
+              loading={isLoading}
+              noData={noData}
+            />
+
+            <RequestTracesWorkspace
+              sessions={sessions}
+              globalRange={timeRange}
+              loading={sessionsLoading || isLoading}
+              selectedSessionId={selectedSessionId}
+              traceLoadingSessionId={traceLoadingSessionId}
+              trace={trace}
+              traceLoading={traceLoading}
+              traceError={traceError}
+              onSelectSession={(id) => void handleViewTrace(id)}
+            />
+          </>
+        )}
 
         <p className="footer-meta" aria-live="polite">
-          Window {metrics?.window ?? "24h"}
-          {metrics?.agent ? ` · ${metrics.agent}` : ""}
+          Window {displayMetrics?.window ?? timeRange.window}
+          {isFleetView
+            ? agents.length > 0
+              ? ` · All agents (${agents.length})`
+              : ""
+            : displayMetrics?.agent
+              ? ` · ${displayMetrics.agent}`
+              : ""}
           {lastUpdated && ` · Last updated ${lastUpdated.toLocaleString()}`}
         </p>
       </main>

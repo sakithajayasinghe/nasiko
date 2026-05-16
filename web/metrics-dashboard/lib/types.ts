@@ -71,6 +71,8 @@ export type MetricsSourceMeta = {
   trace_count: number;
   latency_ms_p50: number | null;
   latency_ms_p99: number | null;
+  project_id?: string | null;
+  cost_usd?: number | null;
   session_count?: number;
   uptime?: {
     successful_checks: number;
@@ -78,6 +80,43 @@ export type MetricsSourceMeta = {
     expected_checks_24h: number;
     poll_interval_minutes: number;
     current_health: boolean;
+  };
+  /**
+   * Tier B — User-feedback / quality scores aggregated from
+   * `session_annotation_summaries[*].mean_score` (e.g. thumbs/ratings).
+   * `null` mean_score = no annotated sessions in window.
+   */
+  quality?: {
+    mean_score: number | null;
+    sample_count: number;
+    /**
+     * Top label fractions across all annotated sessions in the window
+     * (sorted descending by fraction; capped to 4 entries).
+     */
+    top_labels: Array<{ label: string; fraction: number }>;
+    /**
+     * The annotation name we surfaced (first that produced a score).
+     * Hint for the UI when there are multiple annotation streams.
+     */
+    primary_annotation?: string | null;
+  };
+  /**
+   * Tier B — Orchestration depth: how many spans/traces per user request,
+   * a proxy for tool-call complexity. From `session.num_traces`.
+   */
+  orchestration?: {
+    avg_traces_per_session: number | null;
+    total_sessions: number;
+    total_traces: number;
+  };
+  /**
+   * Tier B — Prompt vs completion cost split from Phoenix `cost_summary`.
+   * Either half may be null if Phoenix didn't report it.
+   */
+  cost_breakdown?: {
+    prompt_usd: number | null;
+    completion_usd: number | null;
+    total_usd: number | null;
   };
 };
 
@@ -101,4 +140,105 @@ export type AgentMetricsResponse = {
   /** True when Phoenix project missing or no traces in window. */
   no_data?: boolean;
   message?: string;
+};
+
+/** Row for sessions table (from `/api/sessions`). */
+export type MetricsSessionRow = {
+  session_id: string;
+  start_time: string | null;
+  num_traces: number;
+  latency_ms_p50: number | null;
+  status: "ok" | "error" | "unknown";
+  preview: string | null;
+};
+
+export type SessionsListResponse = {
+  agent: string;
+  window: string;
+  sessions: MetricsSessionRow[];
+};
+
+export type SessionTraceRef = {
+  id?: string;
+  trace_id: string;
+  latency_ms?: number | null;
+};
+
+export type SessionDetailResponse = {
+  session_id: string;
+  num_traces: number;
+  traces: SessionTraceRef[];
+  project_id: string | null;
+};
+
+export type TraceSpanNode = {
+  id: string;
+  span_id?: string;
+  name?: string;
+  span_kind?: string;
+  status_code?: string;
+  latency_ms?: number | null;
+  children?: TraceSpanNode[];
+};
+
+export type TraceGraphNode = {
+  id: string;
+  position: { x: number; y: number };
+  data: {
+    label: string;
+    latency_ms: number | null;
+    status_code: string | null;
+    span_kind: string | null;
+    /** n8n-style workflow node type for the trace canvas */
+    node_kind?: "user" | "llm" | "agent" | "tool" | "step";
+    tone?: "ok" | "error" | "neutral";
+    subtitle?: string;
+  };
+};
+
+export type TraceGraphEdge = {
+  id: string;
+  source: string;
+  target: string;
+};
+
+export type TraceDetailResponse = {
+  agent: string;
+  trace_id: string;
+  latency_ms: number | null;
+  num_spans: number;
+  nodes: TraceGraphNode[];
+  edges: TraceGraphEdge[];
+  truncated: boolean;
+};
+
+/**
+ * Challenge 1 — Platform / activity log entries synthesized server-side from
+ * existing observability + registry data. We never call Nasiko logging APIs
+ * directly; each row is derived from a session lifecycle event or a registry
+ * snapshot.
+ */
+export type LogLevel = "INFO" | "WARNING" | "ERROR";
+
+export type SyntheticLogRow = {
+  id: string;
+  ts: string; // ISO-8601
+  level: LogLevel;
+  service: string; // e.g. "agent:a2a-translator", "platform", "registry"
+  message: string;
+  agent_id?: string | null;
+  session_id?: string | null;
+  latency_ms?: number | null;
+  detail?: Record<string, unknown> | null;
+};
+
+export type LogsResponse = {
+  window: string;
+  generated_at: string; // ISO-8601
+  total: number;
+  source_counts: {
+    sessions: number;
+    registry: number;
+  };
+  logs: SyntheticLogRow[];
 };

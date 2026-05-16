@@ -5,6 +5,9 @@
   --muted: #8b9cb3;
   --accent: #3b82f6;
   --border: #2d3a4d;
+  --ok: #22c55e;
+  --bad: #ef4444;
+  --bad-soft: #f87171;
 }
 
 * {
