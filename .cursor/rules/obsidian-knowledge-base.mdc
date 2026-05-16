@@ -1,0 +1,123 @@
+---
+description: Maintain the Obsidian vault as the Nasiko codebase knowledge base for architecture, features, and decisions
+globs: vault/**/*.md
+alwaysApply: false
+---
+
+# Nasiko Obsidian Knowledge Base
+
+The `vault/` folder is an Obsidian vault (plain Markdown) co-located with this repo. Use it as the **source of truth for why and how**, while code and `docs/` remain the source of truth for **what runs today**.
+
+## When to use the vault vs code
+
+| Question | Look here first |
+|----------|-----------------|
+| How does X work right now? | Code, `docs/`, READMEs |
+| Why was X built this way? | `vault/decisions/` |
+| What are we building next? | `vault/features/` |
+| How do subsystems connect? | `vault/architecture/` |
+| What changed in a session? | `vault/sessions/` |
+
+In Cursor chat, reference notes with `@vault/...` or `@Codebase` when asking about stored knowledge.
+
+## Vault layout (PARA-inspired, codebase-focused)
+
+```
+vault/
+  index.md              # Map of the vault — update when adding top-level areas
+  architecture/         # System diagrams, service boundaries, data flows
+  features/               # Specs, acceptance criteria, open questions (active work)
+  decisions/            # ADRs — immutable intent; supersede, don't rewrite history
+  reference/            # Stable how-tos (CLI, deploy, env) that complement docs/
+  sessions/             # Short session logs (optional daily notes)
+  templates/            # Note templates — copy, don't edit in place
+```
+
+## Markdown conventions
+
+- Wiki links: `[[note-name]]` (filename without `.md`, kebab-case)
+- Link to repo paths inline: `` `app/service/agent_operations_service.py` ``
+- Dates in titles or sections: `YYYY-MM-DD`
+- Frontmatter on every new note:
+
+```yaml
+---
+title: Human-readable title
+type: architecture | feature | decision | reference | session
+status: draft | active | done | superseded
+tags: [nasiko, ...]
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
+---
+```
+
+- Tag AI-authored notes: `ai/created` on create, `ai/edited` on edit (in `tags` or body)
+- Do **not** bold markdown headings (`## Section`, not `## **Section**`)
+
+## Note types
+
+### Feature (`vault/features/`)
+
+- Problem, goals, non-goals
+- Affected services/paths (with links)
+- Tasks checklist
+- Open questions
+- On ship: set `status: done` and link to `vault/decisions/` if a significant choice was made
+
+### ADR (`vault/decisions/`)
+
+Name: `NNNN-short-title.md` (next number after highest in folder).
+
+```markdown
+## Status
+Proposed | Accepted | Superseded by [[other-adr]]
+
+## Context
+## Decision
+## Consequences
+```
+
+Never delete ADRs; mark superseded and link forward.
+
+### Architecture (`vault/architecture/`)
+
+- One concern per note; link related notes with `[[...]]`
+- Prefer mermaid for flows; keep diagrams in the note
+
+## Agent workflow (code + vault together)
+
+**Before implementing a non-trivial feature**
+
+1. Read `vault/index.md` and any linked `features/` or `architecture/` notes
+2. If none exist, create a draft feature note from `vault/templates/feature.md`
+
+**While implementing**
+
+3. Update the feature note checklist and affected paths
+4. Record non-obvious choices in a new ADR when the decision is hard to reverse
+
+**After completing work**
+
+5. Update `updated` in frontmatter; add a one-line entry under `## Log` (new bullet only — never rewrite old log lines):
+
+```markdown
+## Log
+- 2026-05-16 — 🤖 Implemented agent upload validation; see `app/service/agent_upload_service.py`
+```
+
+6. Add `[[wiki-links]]` from architecture or index notes when it improves discoverability
+
+**Queries without clutter**
+
+- Answer from existing notes when asked; do not create notes unless the user asks to document or the task requires a feature/ADR/session record
+
+## Obsidian compatibility
+
+- Files are standard Markdown; avoid HTML-only constructs
+- Preserve existing `[[links]]` and frontmatter keys
+- Do not modify `.obsidian/` (Cursor ignores it via `.cursorignore`)
+- Optional: open `vault/` as the vault root in Obsidian while the repo root stays open in Cursor
+
+## Sensitive content
+
+Never store secrets, tokens, or contents of `.env`, `.nasiko-local.env`, or `superuser_credentials.json` in the vault. Reference env var *names* only.

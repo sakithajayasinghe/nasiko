@@ -1,0 +1,18 @@
+---
+description: Sync code and feature work with the Obsidian vault knowledge base
+alwaysApply: true
+---
+
+# Knowledge base sync (Nasiko)
+
+This repo keeps an Obsidian vault at `vault/` for architecture, features, and ADRs.
+
+When the user asks to plan, design, or implement a **non-trivial** feature (multi-file, new service, or unclear requirements):
+
+1. **Consult** `vault/index.md` and linked notes under `vault/features/` and `vault/architecture/` before editing code.
+2. **Propose** creating or updating a feature note if none exists; follow `obsidian-knowledge-base` rules in `vault/**/*.md`.
+3. **After** substantial implementation, offer to update the feature note, add an ADR for durable decisions, and refresh cross-links in `vault/index.md`.
+
+For small fixes (typos, single-line bugs, formatting), skip vault updates unless the user asks.
+
+Detailed vault conventions: see rule **obsidian-knowledge-base** (applies when editing `vault/**/*.md`).

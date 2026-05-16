@@ -1,0 +1,20 @@
+# Obsidian UI state (not knowledge)
+vault/.obsidian/
+vault/.trash/
+
+# Secrets and local env
+.env
+.env.*
+.nasiko-local.env
+superuser_credentials.json
+
+# Build artifacts and deps
+**/__pycache__/
+**/.venv/
+**/node_modules/
+**/dist/
+**/build/
+**/.pytest_cache/
+
+# Large binaries
+*.dmg
